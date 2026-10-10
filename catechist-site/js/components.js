@@ -26,11 +26,11 @@ const nav = (accountType, active) =>
         `<button data-a="${k === "logout" ? "go" : "go"}" data-v="${k}" class="${active == k ? "on" : ""}"><svg viewBox="0 0 24 24">${IC[k] || '<path d="M3 11l9-8 9 8v10H3z"/>'}</svg>${l}</button>`,
     )
     .join("")}</div><div style="padding:10px;text-align:center;font-size:12px;color:var(--mut)">${S.sessionUser ? `${S.sessionUser.name}` : ""}</div></div>`;
-const req = (y) =>
-  FORM[y]
-    .filter((g) => g[1] == "Required")
-    .reduce((a, g) => a + g[2].length, 0);
-const reqDone = (y) =>
-  FORM[y]
-    .filter((g) => g[1] == "Required")
-    .reduce((a, g) => a + g[2].filter((i) => S.done.has(y + i)).length, 0);
+const req = (year) =>
+  formationCourses[year]
+    .filter((group) => group[1] == "Required")
+    .reduce((total, group) => total + group[2].length, 0);
+const reqDone = (year) =>
+  formationCourses[year]
+    .filter((group) => group[1] == "Required")
+    .reduce((total, group) => total + group[2].filter((item) => S.done.has(year + item)).length, 0);

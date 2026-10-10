@@ -42,15 +42,15 @@ const mentors = [
   [13, "Mary Chua", "rc", "30s", 6, ["Youth", "Classroom management"]],
   [14, "Anthony Goh", "gs", "50s+", 20, ["Scripture", "Sacrament prep"]],
 ];
-const SK = ["Classroom management", "Sacrament prep", "Scripture", "Youth"];
-const TOP = [
+const skills = ["Classroom management", "Sacrament prep", "Scripture", "Youth"];
+const topics = [
   "Knowledge sharing",
   "Classroom management",
   "Burnout management",
   "Safe space",
   "Fellowship",
 ];
-const FORM = {
+const formationCourses = {
   1: [
     ["Retreat & orientation", "Required", ["Orientation for New Catechists"]],
     [
@@ -123,7 +123,7 @@ const FORM = {
     ],
   ],
 };
-const LIB = [
+const libraryCategories = [
   "Classroom management",
   "Knowledge",
   "Fellowship",

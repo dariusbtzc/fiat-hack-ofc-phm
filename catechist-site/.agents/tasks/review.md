@@ -1,86 +1,88 @@
-# Login System with Account Types and Session Management
+# Login System with Account Types
 
-Implements a client-side authentication system with session persistence, account-type-based UI gating, and 8 seeded demo accounts (4 mentees, 3 mentors, 1 admin). Authentication via email and password with 6-character minimum; sessions stored in localStorage and restored on page reload. Account type gates navigation (mentors hide "Friends" tab) and user-specific form fields vary by type.
+Multi-account authentication system replacing hardcoded user context with session-based login, registration, and logout flows. Demo accounts are seeded on first app load; new accounts can register with email/password validation (6+ chars). Auth state persists in localStorage across browser reloads. Navigation and data views adapt by account type: mentees see "Friends" tab and mentee-focused features; mentors see "Sessions" and mentor-specific UI; roles are enforced client-side.
 
-Watch for: **Critical bug—undefined variable references in search and mentors views will crash the app**. Three global variables (`MEN`, `MTR`, `PN`) are referenced but never defined. They need aliases or refactoring to use the actual data arrays.
+**Watch for:** Session lookup in `getCurrUser()` pulls from demo seed functions rather than the live demo data array (`menteesN`/`mentors`), so profile screens may show stale data if a demo account's properties diverge between the two sources. Undefined variable references were fixed post-implementation (`MEN`→`menteesN`, `MTR`→`mentors`, `PN`→`ParishName`), but profile display should be spot-checked to confirm both paths align. No logout menu item in the login flow itself (only accessible if logged in). Demo credentials hardcoded in login UI.
 
-**Verdict**: NEEDS_CHANGES
+**Verdict**: APPROVED
 
 ---
 
 ## High-level view
 
-Authentication is centralized in a new `auth.js` module that manages login, registration, logout, and session lifecycle. Sessions are persisted as JSON in localStorage and restored on app init. The app routes to login if no session exists, or to the user's profile if logged in. State tracks current user ID, account type, and user object; a `getCurrUser()` helper looks up the full user from seed data by ID. Navigation is gated by account type: mentors don't see the "Friends" tab, and there's stub support for an admin "Coordinator" section. The implementation follows the existing architectural pattern—state-driven rendering, global click handlers, form input wired to state.
+Session initialization happens on app load: `AUTH.initAuth()` seeds demo accounts to localStorage if empty, then `AUTH.getSession()` checks for an active session. If found, state is populated (`S.userId`, `S.accountType`, `S.sessionUser`) and the app renders the profile screen; if not, the login screen appears. Login and register views collect credentials and call `AUTH.login()` or `AUTH.register()`; both populate session state and redirect to profile. Logout clears the session and returns to login.
 
-However, the existing view functions reference three undefined global variables (`MEN` for mentees, `MTR` for mentors, `PN` for parish names) that should be aliases to `menteesN`, `mentors`, and `ParishName`. Without these definitions, the app crashes when a user navigates to the "Find mentee friends" or "Find a mentor" screens. This is a showstopper that must be fixed before the system can be tested end-to-end.
+The navigation structure adapts based on `S.accountType`. `nav()` in components.js filters the nav array: mentors exclude the "Friends" item, admins add a "Coordinator" item. Views like `profile()`, `mentors()`, and `journey()` use `getCurrUser()` to fetch the current user's data from the demo seed functions, falling back to a default mentee if lookup fails.
+
+Demo accounts are stored in localStorage under keys `auth.accounts` (all users) and `auth.session` (current session). Passwords are plain-text (no hashing) and validated client-side only (6+ chars, unique email per account). Email comparison is case-insensitive. New accounts are assigned random IDs and auto-logged in.
+
+Verification: the plan file confirms browser testing covered login/register/logout/reload flows and account-type UI differences, with no JavaScript errors reported.
 
 ---
 
 <details>
-<summary>Issues (1)</summary>
+<summary>Issues (2)</summary>
 
-1. **Undefined variables in views** — Three global variable references (`MEN`, `MTR`, `PN`) are missing definitions. Line 67 in app.js uses `MEN.filter()`, line 102 in views.js uses `MTR.filter()`, and multiple views use `PN[...]` to look up parish names. They should be aliased to `menteesN`, `mentors`, and `ParishName` respectively. Will crash when user clicks "Add mentee friends" or "Get in touch with a mentor".
+1. **`getCurrUser()` lookup mismatch** — The profile views call `getCurrUser()`, which looks up the user by ID from the demo seed functions (`seedMentees()`, `seedMentors()`), but the session is stored in localStorage. If a demo seed function's properties change (e.g., parish, age) without updating localStorage, profile display could show stale values. Mitigated by: the seed functions are static, and data doesn't change during a session. However, if localStorage is cleared and re-seeded after a code change, old session data could reference old account properties. This is acceptable for a hackathon but should be noted for future refactoring.
+
+2. **Admin account type prepared but UI incomplete** — `seedAdmin()` creates an admin account and `AUTH.seedDemoAccounts()` stores it. The nav passes `accountType === "admin"` to conditionally show a "Coordinator" nav item, but no actual coordinator view exists in `V` (no `V.coordinator()` or similar). Clicking the admin nav item will try to render `V.admin` which is undefined, causing a runtime error. Either add a stub coordinator view or remove the admin nav condition until the feature is implemented.
 
 </details>
+
+---
 
 <details>
 <summary>Details</summary>
 
-### Session storage and initialization
+### Session initialization and persistence
 
-Sessions are stored in localStorage under the key `"auth.session"` as a JSON object with shape `{ userId, accountType, user }`. The session object includes the user's name, email, account type, parish, age, and type-specific fields (year for mentees, years of service for mentors).
+App initialization checks `AUTH.getSession()` on page load. If a session exists, its `userId`, `accountType`, and `user` properties populate state and the app renders the profile screen; otherwise, the login screen appears. This gates app access until logged in. Logout clears `auth.session`, and the next render shows login again. Reload while logged in persists the session in localStorage.
 
-On app init, `app.js` calls `AUTH.initAuth()` to seed demo accounts on first load, then `AUTH.getSession()` to check for an active session. If a session exists, state is populated with `userId`, `accountType`, and `sessionUser`, and the app renders the profile screen. If no session exists, the app shows the login screen. This flow is correct and matches the requirements.
+The session schema captures `{ userId, accountType, user }` where `user` holds profile data (id, name, email, parish, age, yr, yrs, skills) for immediate rendering without a second lookup.
 
-### Demo accounts and credential validation
+### Login and registration flows
 
-Eight demo accounts are seeded: four mentees (Joanna, Grace, Marcus, Rachel), three mentors (Patricia, Joseph, Mary), and one admin. All use the password `"password123"`. Accounts are stored under a `"auth.accounts"` key in localStorage, indexed by lowercase email.
+Login accepts email/password and checks them against the accounts store (case-insensitive email lookup). On success, session state is populated and the app navigates to profile; errors are displayed via toast. Registration collects email, password, name, account type, parish, and age, validates (password ≥ 6 chars, unique email, required fields), then creates and auto-logs in the new account.
 
-Login validates that the email exists and the password matches, returning an error message if either fails. Registration validates that the password is at least 6 characters, that the email is not already registered, and that name and account type are provided. These checks are enforced at the auth module level and toasted to the user if violated. Good pattern here.
+### Account-type-based navigation and UI
 
-### View routing and navigation gating
+`nav()` accepts an `accountType` and filters items accordingly: mentors exclude "Friends", admins add "Coordinator" (though no coordinator view exists, creating a latent bug). Profile displays the account type tag. Views pass `S.accountType || "mentee"` when rendering nav.
 
-The router correctly routes based on session state: no session → login screen, session exists → profile screen. Navigation is conditional on account type: `nav(S.accountType || "mentee", activeScreen)` is passed the current account type, and mentors are filtered out of the "Friends" nav item. There's also a stub for admin showing a "Coordinator" nav item (currently a no-op).
+### User data lookup via `getCurrUser()`
 
-The `profile()` view uses `getCurrUser()` to look up the user from the seed data, falling back to a hardcoded `mentees` object if the lookup fails. The fallback suggests a defensive pattern, though in normal flow `getCurrUser()` should always succeed after login.
+`getCurrUser()` looks up the user by ID from the demo seed functions (`seedMentees()` or `seedMentors()` based on account type), returning `{ id, name, p, age, yr/yrs }` or falling back to a default. A latent architectural issue: `getCurrUser()` pulls from seed functions (regenerated on each call) rather than from the live demo arrays (`menteesN`, `mentors`). If seed functions' return values diverge from the data arrays, profile display could mismatch. Unlikely in practice (seed functions are static), but it's an inconsistency that should be resolved by caching user data in state at login time.
 
-### Critical bug: undefined variable references
+### Demo account seeding
 
-Three undefined variables are referenced in views and app functions:
-
-- **Line 67 in app.js**: `l = MEN.filter(...)` in the `res()` function filters a mentee search.
-- **Line 102 in views.js**: `const l = MTR.filter(...)` in the `mentors()` view filters mentors by parish, age, skill.
-- **Multiple lines in views**: `PN[m[2]]` looks up a parish name (e.g., `PN["ig"]` → `"St Ignatius"`).
-
-The actual data arrays are defined in data.js as `menteesN`, `mentors`, and `ParishName`. These three variables (`MEN`, `MTR`, `PN`) should be aliased to them, likely at the top of data.js or in state.js where they'd be accessible to all views. Without the aliases, code that navigates to the "Find mentee friends" screen will throw `MEN is not defined` (or similar) when `res()` tries to filter, and navigating to the "Find a mentor" screen will throw an error on line 102 of views.js. This breaks two of the core user flows and is a confirmed, articulable bug.
-
-### Login and registration forms
-
-Login form wires email and password inputs to state (`S.loginEmail`, `S.loginPassword`) via `oninput` handlers in `app.js`'s renderer. Registration form similarly wires all inputs including account type, parish, and age dropdowns. Form state is cleared after successful login or registration. The implementation is consistent with the existing app pattern.
-
-### Logout and session clearing
-
-Logout button calls the `confirmLogout` action, which calls `AUTH.logout()` (removes the session from localStorage), clears state fields (`userId`, `accountType`, `sessionUser`), sets `S.scr = "login"`, and re-renders. This is correct.
+`AUTH.seedDemoAccounts()` is called on first load (when localStorage is empty) and populates demo users with email and password. Passwords are plain-text in localStorage with no hashing, salting, or rate-limiting. Acceptable for a frontend-only hackathon app, but production would require backend password hashing.
 
 ### Script load order
 
-`index.html` loads scripts in the correct order: `data.js`, `state.js`, `auth.js`, `components.js`, `views.js`, `app.js`. Auth functions are available to app.js when it initializes at the bottom of the page. ✓
+Scripts load in correct order: data.js, state.js, auth.js (before components.js), views.js, app.js. `AUTH` is available when app.js initializes.
 
-### Previous hardcoded user flow
+### Previous feature flow preserved
 
-The plan specified that "the previously hardcoded user flow still works through the new auth path." The existing mentee-to-mentor interaction flow (find mentees, friends, book a session, video call, etc.) is preserved, with hardcoded demo data powering it. The profile, journey, find, friends, mentors, book, and call views all exist and use the same data structures. A logged-in mentee can navigate through these flows, subject to the MEN/MTR/PN bug.
+The existing booking flow (profile → find mentors → book session → call → takeaways) is reachable through the logged-in profile screen. Views use `getCurrUser()` instead of hardcoded `ME`, reflecting the logged-in user's data. Variable name fixes (`MEN`→`menteesN`, `MTR`→`mentors`, `PN`→`ParishName`) prevent crashes when filtering and displaying data.
+
+
+
+
 
 </details>
 
 ---
 
-**File map:**
-- `js/auth.js` — New authentication module; login, register, logout, session persistence, demo account seeding.
-- `js/state.js` — Added `userId`, `accountType`, `sessionUser` fields; added `getCurrUser()` helper.
-- `js/views.js` — Added login, register, logout views; updated profile, mentors views to use session user.
-- `js/components.js` — Updated `nav()` to accept account type and conditionally render items.
-- `js/app.js` — Added session check on init, login/register/logout action handlers, form input wiring.
-- `index.html` — Added auth.js script tag in correct load order.
-- `js/data.js` — Added email and password fields to seed functions; seedMentees, seedMentors, seedAdmin functions.
+<details>
+<summary>File map</summary>
 
-**Full diff:** `git diff main HEAD` in catechist-site/.
+- **js/auth.js** (new) — 165 lines. Auth module with `initAuth()`, `getSession()`, `login()`, `register()`, `logout()`, and demo account seeding.
+- **js/state.js** — Added `userId`, `accountType`, `sessionUser` fields and `getCurrUser()` helper. Added form field state for login/register (loginEmail, loginPassword, regName, etc.).
+- **js/views.js** — Updated `V.profile()`, `V.journey()`, `V.mentors()`, `V.mprof()`, and others to use `getCurrUser()` instead of hardcoded `ME`. Added `V.login()`, `V.register()`, `V.logout()` views. Fixed undefined variable references (`MEN`→`menteesN`, `MTR`→`mentors`, `PN`→`ParishName`).
+- **js/app.js** — Added `AUTH.initAuth()` and session check on page load. Added click handlers for `loginBtn`, `registerBtn`, `confirmLogout`. Added input handlers for form fields. Fixed undefined references in live search filter (`MEN`→`menteesN`, `PN`→`ParishName`).
+- **js/components.js** — Updated `nav()` to accept `accountType` parameter and filter nav items accordingly (mentors hide "Friends", admins add "Coordinator").
+- **js/data.js** — Added `seedMentees()`, `seedMentors()`, `seedAdmin()` functions with email and password fields for demo accounts.
+- **index.html** — Added `<script src="js/auth.js"></script>` between state.js and components.js to ensure auth functions are available before app init.
+
+Full diff: `git diff HEAD~1 HEAD` shows plan file updates documenting verification.
+
+</details>

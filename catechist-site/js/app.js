@@ -2,17 +2,17 @@
 function R() {
   clearInterval(S.iv);
   $("#app").innerHTML = V[S.scr]();
-  const NA = {
+  const navigationMap = {
     journey: "profile",
     mprof: "mentors",
     book: "mentors",
     sent: "mentors",
     take: "mentors",
   };
-  if (NA[S.scr])
+  if (navigationMap[S.scr])
     $("#app").insertAdjacentHTML(
       "beforeend",
-      nav(S.accountType || "mentee", NA[S.scr]).replace("bar side", "bar side x"),
+      nav(S.accountType || "mentee", navigationMap[S.scr]).replace("bar side", "bar side x"),
     );
   $("#app").className = $("#app .side") ? "wn" : "";
   scrollTo(0, 0);
@@ -63,62 +63,62 @@ function R() {
   }
 }
 function res() {
-  const q = S.q.toLowerCase(),
-    l = menteesN.filter(
-      (m) =>
-        m[1].toLowerCase().includes(q) || ParishName[m[2]].toLowerCase().includes(q),
+  const query = S.q.toLowerCase(),
+    results = menteesN.filter(
+      (mentee) =>
+        mentee[1].toLowerCase().includes(query) || ParishName[mentee[2]].toLowerCase().includes(query),
     );
   $("#res").innerHTML =
-    `<div class="mut" style="margin:10px 0">${l.length} mentees found · They'll need to accept your request</div>` +
-    l
-      .map((m) => {
-        const f = S.fr.has(m[0]),
-          r = S.req.has(m[0]);
-        return `<div class="card row">${av(m[1])}<div class="g"><div class="b">${m[1]}</div><div class="mut">${ParishName[m[2]]} · Year ${m[3]}</div></div><button class="${f ? "" : r ? "sft" : "pri"}" ${f ? "disabled" : ""} data-a="add" data-v="${m[0]}">${f ? "Friends" : r ? "Requested" : "Add"}</button></div>`;
+    `<div class="mut" style="margin:10px 0">${results.length} mentees found · They'll need to accept your request</div>` +
+    results
+      .map((mentee) => {
+        const isFriend = S.fr.has(mentee[0]),
+          isRequested = S.req.has(mentee[0]);
+        return `<div class="card row">${av(mentee[1])}<div class="g"><div class="b">${mentee[1]}</div><div class="mut">${ParishName[mentee[2]]} · Year ${mentee[3]}</div></div><button class="${isFriend ? "" : isRequested ? "sft" : "pri"}" ${isFriend ? "disabled" : ""} data-a="add" data-v="${mentee[0]}">${isFriend ? "Friends" : isRequested ? "Requested" : "Add"}</button></div>`;
       })
       .join("");
 }
-function toast(t) {
-  const e = document.createElement("div");
-  e.textContent = t;
-  e.style.cssText =
+function toast(message) {
+  const element = document.createElement("div");
+  element.textContent = message;
+  element.style.cssText =
     "position:fixed;left:50%;top:calc(16px + env(safe-area-inset-top,0px));transform:translateX(-50%);background:var(--pri);color:var(--on);padding:10px 16px;border-radius:99px;z-index:20;font-weight:600;pointer-events:none";
-  document.body.appendChild(e);
-  setTimeout(() => e.remove(), 1800);
+  document.body.appendChild(element);
+  setTimeout(() => element.remove(), 1800);
 }
-document.addEventListener("change", (e) => {
-  const t = e.target.closest("[data-a]");
-  if (!t) return;
-  if (t.dataset.a == "pf") {
-    S.pf = t.value;
+document.addEventListener("change", (event) => {
+  const target = event.target.closest("[data-a]");
+  if (!target) return;
+  if (target.dataset.a == "pf") {
+    S.pf = target.value;
     R();
   }
-  if (t.dataset.a == "af") {
-    S.af = t.value;
+  if (target.dataset.a == "af") {
+    S.af = target.value;
     R();
   }
-  if (t.dataset.a == "chk") {
-    const k = t.dataset.v;
-    t.checked ? S.done.add(k) : S.done.delete(k);
+  if (target.dataset.a == "chk") {
+    const key = target.dataset.v;
+    target.checked ? S.done.add(key) : S.done.delete(key);
     R();
   }
 });
-document.addEventListener("click", (e) => {
-  const t = e.target.closest("[data-a]");
-  if (!t || t.tagName == "SELECT" || t.type == "checkbox") return;
-  const a = t.dataset.a,
-    v = t.dataset.v;
-  const go = (s) => {
-    S.scr = s;
+document.addEventListener("click", (event) => {
+  const target = event.target.closest("[data-a]");
+  if (!target || target.tagName == "SELECT" || target.type == "checkbox") return;
+  const action = target.dataset.a,
+    value = target.dataset.v;
+  const go = (screen) => {
+    S.scr = screen;
     R();
   };
   ({
     go: () => {
-      if (v == "book") {
+      if (value == "book") {
         S.date = null;
         S.time = null;
       }
-      go(v);
+      go(value);
     },
     loginBtn: () => {
       if (!S.loginEmail || !S.loginPassword) {
@@ -174,55 +174,55 @@ document.addEventListener("click", (e) => {
       toast("Logged out");
     },
     tab: () => {
-      S.tab = +v;
+      S.tab = +value;
       R();
     },
     add: () => {
-      const id = +v;
+      const id = +value;
       S.req.has(id) ? S.req.delete(id) : (S.req.add(id), toast("Request sent"));
       res();
     },
     acc: () => {
-      const id = +v;
+      const id = +value;
       S.inc = S.inc.filter((x) => x != id);
       S.fr.add(id);
       R();
     },
     dec: () => {
-      S.inc = S.inc.filter((x) => x != +v);
+      S.inc = S.inc.filter((x) => x != +value);
       R();
     },
     rx: () => {
-      const [i, em] = v.split("|");
+      const [i, em] = value.split("|");
       S.rx[i] = em;
       toast("Sent " + em);
       R();
     },
     lib: () => {
-      S.lib = S.lib == v ? null : v;
+      S.lib = S.lib == value ? null : value;
       R();
     },
     sf: () => {
-      S.sf = v;
+      S.sf = value;
       R();
     },
     mp: () => {
-      S.mid = +v;
+      S.mid = +value;
       go("mprof");
     },
     date: () => {
-      S.date = +v;
+      S.date = +value;
       S.time = null;
       R();
     },
     time: () => {
-      S.time = v;
+      S.time = value;
       R();
     },
     top: () => {
-      S.topics = S.topics.includes(v)
-        ? S.topics.filter((x) => x != v)
-        : [...S.topics, v].slice(-2);
+      S.topics = S.topics.includes(value)
+        ? S.topics.filter((x) => x != value)
+        : [...S.topics, value].slice(-2);
       R();
     },
     send: () => {
@@ -241,13 +241,13 @@ document.addEventListener("click", (e) => {
       go("call");
     },
     mic: () => {
-      t.textContent = t.textContent == "Mic on" ? "Mic off" : "Mic on";
+      target.textContent = target.textContent == "Mic on" ? "Mic off" : "Mic on";
     },
     cam: () => {
-      t.textContent = t.textContent == "Camera on" ? "Camera off" : "Camera on";
+      target.textContent = target.textContent == "Camera on" ? "Camera off" : "Camera on";
     },
     ct: () => {
-      S.ct = +v;
+      S.ct = +value;
       R();
     },
     c0: () => {
@@ -274,7 +274,7 @@ document.addEventListener("click", (e) => {
       S.note = "";
       go("book");
     },
-  })[a]?.();
+  })[action]?.();
 });
 
 // Initialize auth on page load
