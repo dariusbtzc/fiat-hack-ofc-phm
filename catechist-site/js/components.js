@@ -1,9 +1,13 @@
 // components.js — Reusable UI pieces: avatar, header, bottom/side navigation, formation progress.
-const renderAvatar = (n, c = "") => `<div class="av ${c}">${getInitials(n)}</div>`;
-const renderHeader = (t, sub, back = "profile", extra = "") =>
-  `<div class="hd"><button class="back" aria-label="Back" data-a="go" data-v="${back}">‹</button><div style="flex:1"><h1>${t}</h1>${sub ? `<small>${sub}</small>` : ""}</div>${extra}</div>`;
+const renderAvatar = (fullName, sizeClass = "", inlineStyle = "") =>
+  `<div class="av ${sizeClass}"${inlineStyle ? ` style="${inlineStyle}"` : ""}>${getInitials(fullName)}</div>`;
+
+const renderHeader = (title, subtitle, backScreen = "home", extraHtml = "") =>
+  `<div class="hd"><button class="back" aria-label="Back" data-a="go" data-v="${backScreen}">‹</button><div style="flex:1"><h1>${title}</h1>${subtitle ? `<small>${subtitle}</small>` : ""}</div>${extraHtml}</div>`;
+
 const navIcons = {
-  profile: '<path d="M3 11l9-8 9 8v10H3z"/>',
+  home: '<path d="M3 11l9-8 9 8v10H3z"/>',
+  profile: '<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/>',
   friends:
     '<circle cx="9" cy="8" r="3"/><path d="M3 20c0-4 3-6 6-6s6 2 6 6M17 5a3 3 0 010 6M21 20c0-3-1-5-3-6"/>',
   mentors:
@@ -11,26 +15,63 @@ const navIcons = {
   library:
     '<path d="M2 4h7a3 3 0 013 3v14a2 2 0 00-2-2H2zM22 4h-7a3 3 0 00-3 3v14a2 2 0 012-2h8z"/>',
 };
-const nav = (accountType, active) =>
-  `<div class="bar side" style="padding:0"><div class="nav">${[
-    ["profile", "Profile"],
+
+// Desktop top bar links (matches the wireframe: Courses/Events | Find a Mentor | Resources)
+const renderTopBar = (accountType, activeScreen) => {
+  const links = [
+    ["journey", "Courses / Events"],
+    ["mentors", "Find a Mentor"],
+    ["library", "Resources"],
+    accountType === "admin" && ["admin", "Coordinator"],
+  ].filter(Boolean);
+
+  const linkButtons = links
+    .map(
+      ([screenName, label]) =>
+        `<button data-a="go" data-v="${screenName}" class="${activeScreen === screenName ? "on" : ""}">${label}</button>`,
+    )
+    .join("");
+
+  const user = getCurrentUser() || fallbackUser;
+  return `<header class="top"><button class="logo" data-a="go" data-v="home" aria-label="Catechist Support home" title="Catechist Support">OFC</button><nav aria-label="Main">${linkButtons}</nav><button class="av ${activeScreen === "profile" ? "on" : ""}" data-a="go" data-v="profile" aria-label="Your profile">${getInitials(user.name)}</button></header>`;
+};
+
+// Navigation: top bar on desktop, bottom bar on mobile.
+// hideBottomOnMobile is for screens that have their own fixed bottom bar (e.g. "Book a session").
+const renderNav = (accountType, activeScreen, hideBottomOnMobile = false) => {
+  const bottomActive = activeScreen === "journey" ? "profile" : activeScreen;
+  const navItems = [
+    ["home", "Home"],
     accountType !== "mentor" && ["friends", "Friends"],
     ["mentors", "Mentors"],
     ["library", "Library"],
     accountType === "admin" && ["admin", "Coordinator"],
-    ["logout", "Logout"],
-  ]
-    .filter(Boolean)
+    ["profile", "Profile"],
+  ].filter(Boolean);
+
+  const buttons = navItems
     .map(
-      ([k, l]) =>
-        `<button data-a="${k === "logout" ? "go" : "go"}" data-v="${k}" class="${active == k ? "on" : ""}"><svg viewBox="0 0 24 24">${navIcons[k] || '<path d="M3 11l9-8 9 8v10H3z"/>'}</svg>${l}</button>`,
+      ([screenName, label]) =>
+        `<button data-a="go" data-v="${screenName}" class="${bottomActive === screenName ? "on" : ""}"><svg viewBox="0 0 24 24">${navIcons[screenName] || navIcons.home}</svg>${label}</button>`,
     )
-    .join("")}</div><div style="padding:10px;text-align:center;font-size:12px;color:var(--mut)">${appState.sessionUser ? `${appState.sessionUser.name}` : ""}</div></div>`;
+    .join("");
+
+  return `${renderTopBar(accountType, activeScreen)}<div class="bar side${hideBottomOnMobile ? " x" : ""}" style="padding:0"><div class="nav">${buttons}</div></div>`;
+};
+
+// Key used to remember that a course item has been ticked off
+const makeItemKey = (year, item) => `${year}-${item}`;
+
 const countRequiredCourses = (year) =>
   formationCourses[year]
-    .filter((group) => group[1] == "Required")
-    .reduce((total, group) => total + group[2].length, 0);
+    .filter(([, requirement]) => requirement === "Required")
+    .reduce((total, [, , items]) => total + items.length, 0);
+
 const countCompletedRequired = (year) =>
   formationCourses[year]
-    .filter((group) => group[1] == "Required")
-    .reduce((total, group) => total + group[2].filter((item) => appState.done.has(year + item)).length, 0);
+    .filter(([, requirement]) => requirement === "Required")
+    .reduce(
+      (total, [, , items]) =>
+        total + items.filter((item) => appState.completedItems.has(makeItemKey(year, item))).length,
+      0,
+    );

@@ -107,7 +107,7 @@ The initial implementation had three critical undefined variable references that
 - views.js: mentors() view: Grid map: `PN[m[2]]` → `ParishName[m[2]]`
 - views.js: mprof() view: `PN[m[2]]` → `ParishName[m[2]]`
 
-**Results**: Critical bug fixes applied. The app will no longer crash when users click "Add mentee friends" or "Get in touch with a mentor". All variable references now correctly map to their defined data arrays.
+**Results**: Critical bug fixes applied. The app will no longer crash when users click "Add friends" or "Get in touch with a mentor". All variable references now correctly map to their defined data arrays.
 
 
 
