@@ -1,4 +1,4 @@
-// app.js — Router/renderer renderApp(), live search, toasts and the global click/change handlers (data-a actions).
+// app.js — Router/renderer renderApp(), live search, session/booking helpers, toasts and the global click/change handlers (data-a actions).
 
 // Which nav item to highlight on screens that show the side nav
 const navHighlightByScreen = {
@@ -24,7 +24,7 @@ function renderApp() {
   if (navHighlightByScreen[screen]) {
     app.insertAdjacentHTML(
       "beforeend",
-      renderNav(appState.accountType || "mentee", navHighlightByScreen[screen], true),
+      renderNav(navHighlightByScreen[screen], true),
     );
   }
   app.className = querySelector("#app .side") ? "wn" : "";
@@ -84,7 +84,7 @@ function renderApp() {
 
 function updateSearchResults() {
   const query = appState.searchQuery.toLowerCase();
-  const results = menteeDirectory.filter(
+  const results = getOtherMentees().filter(
     (mentee) =>
       mentee.name.toLowerCase().includes(query) || parishNames[mentee.parish].toLowerCase().includes(query),
   );
@@ -100,6 +100,21 @@ function updateSearchResults() {
         return `<div class="card row">${renderAvatar(mentee.name)}<div class="g"><div class="b">${mentee.name}</div><div class="mut">${parishNames[mentee.parish]} · Year ${mentee.year}</div></div><button class="${buttonClass}" ${isFriend ? "disabled" : ""} data-a="toggleFriendRequest" data-v="${mentee.id}">${buttonLabel}</button></div>`;
       })
       .join("");
+}
+
+// Put a logged-in user (from AUTH.login / register / getSession) into state
+function startSession(session) {
+  appState.accountType = session.accountType;
+  appState.sessionUser = session.user;
+  appState.screen = "home";
+}
+
+// Clear the booking form (used when opening "Book a session" and "Book another session")
+function resetBooking() {
+  appState.selectedDayIndex = null;
+  appState.selectedTime = null;
+  appState.topics = [];
+  appState.bookingNote = "";
 }
 
 function showToast(message) {
@@ -149,10 +164,7 @@ document.addEventListener("click", (event) => {
 
   const clickActions = {
     go: () => {
-      if (value === "book") {
-        appState.selectedDayIndex = null;
-        appState.selectedTime = null;
-      }
+      if (value === "book") resetBooking();
       goToScreen(value);
     },
 
@@ -169,10 +181,7 @@ document.addEventListener("click", (event) => {
         showToast(result.error);
         return;
       }
-      appState.userId = result.userId;
-      appState.accountType = result.accountType;
-      appState.sessionUser = result.user;
-      appState.screen = "home";
+      startSession(result);
       appState.loginEmail = "";
       appState.loginPassword = "";
       renderApp();
@@ -190,22 +199,18 @@ document.addEventListener("click", (event) => {
         showToast(result.error);
         return;
       }
-      appState.userId = result.userId;
-      appState.accountType = result.accountType;
-      appState.sessionUser = result.user;
+      startSession(result);
       appState.regName = "";
       appState.regEmail = "";
       appState.regPassword = "";
       appState.regAccountType = "mentee";
       appState.regParish = "ig";
       appState.regAge = "20s";
-      appState.screen = "home";
       renderApp();
       showToast("Account created!");
     },
     confirmLogout: () => {
       AUTH.logout();
-      appState.userId = null;
       appState.accountType = null;
       appState.sessionUser = null;
       appState.screen = "login";
@@ -316,6 +321,7 @@ document.addEventListener("click", (event) => {
       appState.consentLevel = CONSENT.NONE;
       appState.callTab = 0;
       appState.sessionNotes = "";
+      appState.hadTranscript = false;
       goToScreen("call");
     },
     toggleMic: () => {
@@ -346,10 +352,7 @@ document.addEventListener("click", (event) => {
       goToScreen("take");
     },
     bookAgain: () => {
-      appState.selectedDayIndex = null;
-      appState.selectedTime = null;
-      appState.topics = [];
-      appState.bookingNote = "";
+      resetBooking();
       goToScreen("book");
     },
   };
@@ -360,12 +363,5 @@ document.addEventListener("click", (event) => {
 // Initialize auth on page load
 AUTH.initAuth();
 const savedSession = AUTH.getSession();
-if (savedSession) {
-  appState.userId = savedSession.userId;
-  appState.accountType = savedSession.accountType;
-  appState.sessionUser = savedSession.user;
-  appState.screen = "home";
-} else {
-  appState.screen = "login";
-}
+if (savedSession) startSession(savedSession);
 renderApp();

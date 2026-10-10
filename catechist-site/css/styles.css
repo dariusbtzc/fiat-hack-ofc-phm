@@ -204,6 +204,9 @@ button {
   color: var(--tx);
 }
 input[type="search"],
+input[type="email"],
+input[type="password"],
+input[type="text"],
 textarea,
 select {
   width: 100%;
@@ -214,6 +217,11 @@ select {
   background: var(--card);
   color: var(--tx);
   min-height: 44px;
+}
+/* Login / register forms: stacked fields */
+.form input,
+.form select {
+  margin-bottom: 8px;
 }
 .grid {
   display: grid;

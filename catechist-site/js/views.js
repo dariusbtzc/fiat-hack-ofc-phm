@@ -1,7 +1,8 @@
-// views.js — One render function per screen (profile, journey, find, friends, library, mentors, mprof, book, sent, call, take).
+// views.js — One render function per screen (login, register, logout, home, connect, profile, journey, find, friends,
+// library, mentors, mprof, book, sent, call, take, admin), plus the shared "connect" section used by the Add Friend page.
 // Home screen: the four "connect" boxes (add a friend, encouragement, peer support, fellowship groups)
 const renderConnectSection = (user) => {
-  const friendsList = menteeDirectory.filter((mentee) => appState.friends.has(mentee.id));
+  const friendsList = getFriends();
 
   const renderChips = (options, current, action) =>
     options
@@ -84,46 +85,43 @@ ${suggestionRows}<button class="sft full" data-a="go" data-v="find">${hiddenCoun
   return `<div class="home-cols">${addFriendCard}<div class="stack">${encouragementCard}${peerCard}</div><div class="span-all">${fellowshipCard}</div></div>`;
 };
 
+// <option> list for a <select>; options are [value, label] pairs
+const renderOptions = (options, selectedValue) =>
+  options
+    .map(([value, label]) => `<option value="${value}" ${value === selectedValue ? "selected" : ""}>${label}</option>`)
+    .join("");
+
 const screenViews = {
   login() {
     return `<div class="pad" style="padding-top:60px;text-align:center;max-width:560px;margin:0 auto">
 <div style="font-size:44px">✝️</div>
 <h1 style="margin-top:16px">Catechist Support</h1>
 <p class="mut">Mentoring & growth for catechists</p>
-<div class="card" style="text-align:left;margin-top:32px">
+<div class="card form" style="text-align:left;margin-top:32px">
 <h2 style="margin-top:0">Login</h2>
-<input type="email" id="loginEmail" placeholder="Email" aria-label="Email" style="width:100%;margin-bottom:8px;padding:10px;border:1px solid var(--bor);border-radius:8px;font-family:inherit;font-size:16px" value="${appState.loginEmail}">
-<input type="password" id="loginPassword" placeholder="Password" aria-label="Password" style="width:100%;margin-bottom:8px;padding:10px;border:1px solid var(--bor);border-radius:8px;font-family:inherit;font-size:16px" value="${appState.loginPassword}">
+<input type="email" id="loginEmail" placeholder="Email" aria-label="Email" value="${appState.loginEmail}">
+<input type="password" id="loginPassword" placeholder="Password" aria-label="Password" value="${appState.loginPassword}">
 <button class="pri full" data-a="login">Login</button>
 <button class="full" style="margin-top:6px" data-a="go" data-v="register">Create an account</button>
 </div>
-<p class="mut" style="margin-top:16px;font-size:12px">Demo: joanna.tan@example.com / password123</p>
+<p class="mut" style="margin-top:16px;font-size:12px">Demo: joanna.tan@example.com / ${DEMO_PASSWORD}</p>
 </div>`;
   },
 
   register() {
+    const accountTypes = [
+      ["mentee", "Mentee (trainee catechist)"],
+      ["mentor", "Mentor (experienced catechist)"],
+    ];
     return `<div class="pad" style="padding-top:40px;text-align:center;max-width:560px;margin:0 auto">
 <h1>Create Account</h1>
-<div class="card" style="text-align:left">
-<input type="text" id="regName" placeholder="Name" aria-label="Name" style="width:100%;margin-bottom:8px;padding:10px;border:1px solid var(--bor);border-radius:8px;font-family:inherit;font-size:16px" value="${appState.regName}">
-<input type="email" id="regEmail" placeholder="Email" aria-label="Email" style="width:100%;margin-bottom:8px;padding:10px;border:1px solid var(--bor);border-radius:8px;font-family:inherit;font-size:16px" value="${appState.regEmail}">
-<input type="password" id="regPassword" placeholder="Password (min 6 chars)" aria-label="Password" style="width:100%;margin-bottom:8px;padding:10px;border:1px solid var(--bor);border-radius:8px;font-family:inherit;font-size:16px" value="${appState.regPassword}">
-<select id="regAccountType" style="width:100%;margin-bottom:8px;padding:10px;border:1px solid var(--bor);border-radius:8px;font-family:inherit;font-size:16px">
-<option value="mentee" ${appState.regAccountType === "mentee" ? "selected" : ""}>Mentee (trainee catechist)</option>
-<option value="mentor" ${appState.regAccountType === "mentor" ? "selected" : ""}>Mentor (experienced catechist)</option>
-</select>
-<select id="regParish" style="width:100%;margin-bottom:8px;padding:10px;border:1px solid var(--bor);border-radius:8px;font-family:inherit;font-size:16px">
-<option value="ig" ${appState.regParish === "ig" ? "selected" : ""}>St Ignatius</option>
-<option value="hs" ${appState.regParish === "hs" ? "selected" : ""}>Holy Spirit</option>
-<option value="rc" ${appState.regParish === "rc" ? "selected" : ""}>Risen Christ</option>
-<option value="gs" ${appState.regParish === "gs" ? "selected" : ""}>Good Shepherd</option>
-</select>
-<select id="regAge" style="width:100%;margin-bottom:8px;padding:10px;border:1px solid var(--bor);border-radius:8px;font-family:inherit;font-size:16px">
-<option value="20s" ${appState.regAge === "20s" ? "selected" : ""}>20s</option>
-<option value="30s" ${appState.regAge === "30s" ? "selected" : ""}>30s</option>
-<option value="40s" ${appState.regAge === "40s" ? "selected" : ""}>40s</option>
-<option value="50s+" ${appState.regAge === "50s+" ? "selected" : ""}>50s+</option>
-</select>
+<div class="card form" style="text-align:left">
+<input type="text" id="regName" placeholder="Name" aria-label="Name" value="${appState.regName}">
+<input type="email" id="regEmail" placeholder="Email" aria-label="Email" value="${appState.regEmail}">
+<input type="password" id="regPassword" placeholder="Password (min 6 chars)" aria-label="Password" value="${appState.regPassword}">
+<select id="regAccountType" aria-label="Account type">${renderOptions(accountTypes, appState.regAccountType)}</select>
+<select id="regParish" aria-label="Parish">${renderOptions(Object.entries(parishNames), appState.regParish)}</select>
+<select id="regAge" aria-label="Age">${renderOptions(ageRanges.map((age) => [age, age]), appState.regAge)}</select>
 <button class="pri full" data-a="register">Create Account</button>
 <button class="full" style="margin-top:6px" data-a="go" data-v="login">Back to login</button>
 </div>
@@ -143,9 +141,9 @@ const screenViews = {
   },
 
   home() {
-    const user = getCurrentUser() || fallbackUser;
+    const user = getCurrentUser();
     const isMentor = appState.accountType === "mentor";
-    const friendsList = menteeDirectory.filter((mentee) => appState.friends.has(mentee.id));
+    const friendsList = getFriends();
 
     // Big hero: Find a mentor / Coach a mentee
     const hero = isMentor
@@ -202,39 +200,39 @@ const screenViews = {
     const upcomingBox = `<section class="card"><h3 style="font-size:16px">Upcoming courses / events</h3><div class="mut" style="margin:2px 0 12px">Formation and gatherings near you.</div>${eventRows}<button class="sft full" data-a="go" data-v="journey">View formation courses ›</button></section>`;
 
     return `<div class="pad wide"><section class="hero"><div class="mut" style="color:inherit;opacity:.85">Welcome back, ${user.name.split(" ")[0]}</div><h1>${hero.title}</h1><p>${hero.text}</p>${hero.button}</section>
-<div class="home-trio">${friendsBox}${mentorBox}${upcomingBox}</div></div>${renderNav(appState.accountType || "mentee", "home")}`;
+<div class="home-trio">${friendsBox}${mentorBox}${upcomingBox}</div></div>${renderNav("home")}`;
   },
 
   connect() {
-    const user = getCurrentUser() || fallbackUser;
-    return `${renderHeader("Add a friend", "Connect, encourage and grow together")}<div class="pad" style="margin-top:12px">${renderConnectSection(user)}</div>${renderNav(appState.accountType || "mentee", "connect")}`;
+    const user = getCurrentUser();
+    return `${renderHeader("Add a friend", "Connect, encourage and grow together")}<div class="pad" style="margin-top:12px">${renderConnectSection(user)}</div>${renderNav("connect")}`;
   },
 
   profile() {
-    const user = getCurrentUser() || fallbackUser;
+    const user = getCurrentUser();
     return `<div class="ban"></div><div class="pad" style="margin-top:-44px"><div class="card" style="padding-top:0"><div style="display:flex;justify-content:space-between;align-items:flex-end">${renderAvatar(user.name, "l")}<button class="tag gold" style="border:0;min-height:44px" data-a="go" data-v="journey">Year ${user.year || 1} ›</button></div>
 <h1 style="margin-top:8px">${user.name}</h1><div class="mut" style="margin:2px 0 8px">${parishNames[user.parish]}</div><span class="tag sft" style="background:var(--soft);color:var(--pri)">${appState.accountType === "mentor" ? "Mentor" : "Mentee"}</span><span class="tag">${user.age}</span><span class="tag">Catechist</span>
-<div class="row" style="margin-top:10px"><button class="g" style="border:0;text-align:left;background:none;padding:0" data-a="go" data-v="friends"><span class="b" style="font-size:18px">${appState.friends.size}</span> <span class="mut">friends</span></button><div class="g"><span class="b" style="font-size:18px">${appState.sessionCount}</span> <span class="mut">mentor sessions</span></div></div></div>
+<div class="row" style="margin-top:10px"><button class="g" style="border:0;text-align:left;background:none;padding:0" data-a="go" data-v="friends"><span class="b" style="font-size:18px">${getFriends().length}</span> <span class="mut">friends</span></button><div class="g"><span class="b" style="font-size:18px">${appState.sessionCount}</span> <span class="mut">mentor sessions</span></div></div></div>
 <div class="card row"><div class="av" style="background:var(--gold);color:var(--goldt)">★</div><div><div class="b">1 year of service</div><div class="mut">Thank you for your ministry, ${user.name}.</div></div></div><h2>Grow</h2><div class="grid"><button class="pri" style="padding:16px;text-align:left;border-radius:14px" data-a="go" data-v="connect">Add mentee friends</button><button class="pri" style="padding:16px;text-align:left;border-radius:14px" data-a="go" data-v="mentors">Get in touch with a mentor</button></div>
 <button class="full card" style="margin-top:10px;text-align:left" data-a="go" data-v="library">Library <span class="tag" style="margin-left:6px">Nice-to-have</span></button>
-<button class="full" style="margin:16px 0" data-a="go" data-v="logout">Log out</button></div>${renderNav(appState.accountType || "mentee", "profile")}`;
+<button class="full" style="margin:16px 0" data-a="go" data-v="logout">Log out</button></div>${renderNav("profile")}`;
   },
 
   journey() {
     const year = appState.journeyYear;
     const courses = formationCourses[year];
-    const currentUserYear = getCurrentUser()?.year || fallbackUser.year;
+    const currentUserYear = getCurrentUser().year;
     return `${renderHeader("My formation journey", "Formation courses by the Office for Catechesis")}<div class="pad" style="margin-top:12px"><div class="sw">${[1, 2, 3, 4].map((yearNumber) => `<button class="chip ${yearNumber === year ? "on" : ""}" style="flex:1;margin:0;padding:0" data-a="selectYear" data-v="${yearNumber}">Year ${yearNumber}${yearNumber === 4 ? "+" : ""}</button>`).join("")}</div>
 <div class="card pri" style="background:var(--pri);color:var(--on)"><div class="b" style="color:inherit">${year === currentUserYear ? `You're in Year ${year}` : `Year ${year}`}</div>${countCompletedRequired(year)} of ${countRequiredCourses(year)} required items done</div>
 ${courses.map(([title, requirement, items]) => `<div class="card"><div class="row"><h3 class="g">${title}</h3><span class="tag ${requirement === "Required" ? "gold" : ""}">${requirement}</span></div>${items.map((item) => `<label class="row" style="min-height:44px"><input type="checkbox" data-a="toggleCourseItem" data-v="${makeItemKey(year, item)}" ${appState.completedItems.has(makeItemKey(year, item)) ? "checked" : ""} style="width:20px;height:20px"> ${item}</label>`).join("")}</div>`).join("")}</div>`;
   },
 
   find() {
-    return `${renderHeader("Find mentee friends", "", "connect")}<div class="pad" style="margin-top:12px"><input type="search" id="q" placeholder="Search by name or parish" aria-label="Search by name or parish" value="${appState.searchQuery}"><div id="res"></div></div>${renderNav(appState.accountType || "mentee", "connect")}`;
+    return `${renderHeader("Find mentee friends", "", "connect")}<div class="pad" style="margin-top:12px"><input type="search" id="q" placeholder="Search by name or parish" aria-label="Search by name or parish" value="${appState.searchQuery}"><div id="res"></div></div>${renderNav("connect")}`;
   },
 
   friends() {
-    const friendsList = menteeDirectory.filter((mentee) => appState.friends.has(mentee.id));
+    const friendsList = getFriends();
     const requestsSection = appState.incomingRequests.length
       ? `<h2>Friend requests (${appState.incomingRequests.length})</h2>${appState.incomingRequests
           .map((menteeId) => `<div class="card">${renderFriendRequest(menteeId)}</div>`)
@@ -250,15 +248,15 @@ ${courses.map(([title, requirement, items]) => `<div class="card"><div class="ro
 
     return `${renderHeader("Friends", "Send a quick word of encouragement", "home", `<button class="sft" data-a="go" data-v="connect">Add</button>`)}<div class="pad">
 ${requestsSection}
-<h2>My friends (${friendsList.length})</h2>${friendCards}</div>${renderNav(appState.accountType || "mentee", "friends")}`;
+<h2>My friends (${friendsList.length})</h2>${friendCards}</div>${renderNav("friends")}`;
   },
 
   library() {
-    return `${renderHeader("Library", "", "home", '<span class="tag">Nice-to-have</span>')}<div class="pad" style="margin-top:12px"><input type="search" placeholder="Search resources" aria-label="Search resources" style="margin-bottom:10px">${libraryCategories.map((category) => `<button class="full card" style="text-align:left;min-height:0" data-a="toggleLibraryCategory" data-v="${category}"><span class="b">${category}</span>${appState.openLibraryCategory === category ? '<div class="mut" style="margin-top:8px;font-weight:400">[Resources to be added: articles, lesson plans, videos]</div>' : ""}</button>`).join("")}</div>${renderNav(appState.accountType || "mentee", "library")}`;
+    return `${renderHeader("Library", "", "home", '<span class="tag">Nice-to-have</span>')}<div class="pad" style="margin-top:12px"><input type="search" placeholder="Search resources" aria-label="Search resources" style="margin-bottom:10px">${libraryCategories.map((category) => `<button class="full card" style="text-align:left;min-height:0" data-a="toggleLibraryCategory" data-v="${category}"><span class="b">${category}</span>${appState.openLibraryCategory === category ? '<div class="mut" style="margin-top:8px;font-weight:400">[Resources to be added: articles, lesson plans, videos]</div>' : ""}</button>`).join("")}</div>${renderNav("library")}`;
   },
 
   mentors() {
-    const user = getCurrentUser() || fallbackUser;
+    const user = getCurrentUser();
     const isInUserParish = (mentor) => Number(mentor.parish === user.parish);
 
     const matchingMentors = mentorDirectory
@@ -270,15 +268,8 @@ ${requestsSection}
       )
       .sort((a, b) => isInUserParish(b) - isInUserParish(a)); // mentors from the user's parish first
 
-    const parishOptions = Object.entries(parishNames)
-      .map(
-        ([code, name]) =>
-          `<option value="${code}" ${appState.parishFilter === code ? "selected" : ""}>${name}</option>`,
-      )
-      .join("");
-    const ageOptions = ageRanges
-      .map((age) => `<option ${appState.ageFilter === age ? "selected" : ""}>${age}</option>`)
-      .join("");
+    const parishOptions = renderOptions([["", "All parishes"], ...Object.entries(parishNames)], appState.parishFilter);
+    const ageOptions = renderOptions([["", "Any age"], ...ageRanges.map((age) => [age, age])], appState.ageFilter);
     const skillChips = ["", ...mentorSkills]
       .map(
         (skill) =>
@@ -293,9 +284,9 @@ ${requestsSection}
       )
       .join("");
 
-    return `${renderHeader("Find a mentor")}<div class="pad" style="margin-top:12px"><div class="grid"><select aria-label="Parish" data-a="filterParish"><option value="">All parishes</option>${parishOptions}</select><select aria-label="Age" data-a="filterAge"><option value="">Any age</option>${ageOptions}</select></div>
+    return `${renderHeader("Find a mentor")}<div class="pad" style="margin-top:12px"><div class="grid"><select aria-label="Parish" data-a="filterParish">${parishOptions}</select><select aria-label="Age" data-a="filterAge">${ageOptions}</select></div>
 <div style="margin:10px 0;overflow-x:auto;white-space:nowrap">${skillChips}</div><div class="mut" style="margin-bottom:8px">${matchingMentors.length} mentors match</div>
-<div class="grid g3">${mentorCards}</div></div>${renderNav(appState.accountType || "mentee", "mentors")}`;
+<div class="grid g3">${mentorCards}</div></div>${renderNav("mentors")}`;
   },
 
   mprof() {

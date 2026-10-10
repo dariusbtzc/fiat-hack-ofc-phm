@@ -218,6 +218,9 @@ button {
   color: var(--tx);
 }
 input[type="search"],
+input[type="email"],
+input[type="password"],
+input[type="text"],
 textarea,
 select {
   width: 100%;
@@ -228,6 +231,11 @@ select {
   background: var(--card);
   color: var(--tx);
   min-height: 44px;
+}
+/* Login / register forms: stacked fields */
+.form input,
+.form select {
+  margin-bottom: 8px;
 }
 .grid {
   display: grid;
@@ -555,13 +563,12 @@ select {
     margin-left: auto;
     margin-right: auto;
   }
-}
-</style>
+}</style>
   </head>
   <body>
     <div id="app"></div>
     <script>
-// data.js — Demo data: parishes, users, formation courses, topics (from data-model.md). Replaced by API calls in the full build.
+// data.js — Demo data: parishes, directories, demo logins, formation courses, topics (from data-model.md). Replaced by API calls in the full build.
 const parishNames = {
   ig: "St Ignatius",
   hs: "Holy Spirit",
@@ -571,28 +578,11 @@ const parishNames = {
 
 const ageRanges = ["20s", "30s", "40s", "50s+"];
 
-// Fallback user shown when nobody is logged in
-const fallbackUser = { id: 0, name: "Joanna Tan", parish: "ig", age: "20s", year: 1 };
-
-// Demo accounts (seeded into localStorage on first load)
-const seedMentees = () => [
-  { id: 0, name: "Joanna Tan", parish: "ig", age: "20s", year: 1, email: "joanna.tan@example.com", password: "password123" },
-  { id: 1, name: "Grace Ong", parish: "ig", age: "20s", year: 2, email: "grace.ong@example.com", password: "password123" },
-  { id: 2, name: "Marcus Lim", parish: "hs", age: "20s", year: 1, email: "marcus.lim@example.com", password: "password123" },
-  { id: 3, name: "Rachel Teo", parish: "rc", age: "30s", year: 3, email: "rachel.teo@example.com", password: "password123" },
-];
-const seedMentors = () => [
-  { id: 11, name: "Patricia Lee", parish: "ig", age: "50s+", yearsServing: 15, email: "patricia.lee@example.com", password: "password123", skills: ["Classroom management", "Sacrament prep"] },
-  { id: 12, name: "Joseph Tan", parish: "hs", age: "40s", yearsServing: 10, email: "joseph.tan@example.com", password: "password123", skills: ["Scripture", "Youth"] },
-  { id: 13, name: "Mary Chua", parish: "rc", age: "30s", yearsServing: 6, email: "mary.chua@example.com", password: "password123", skills: ["Youth", "Classroom management"] },
-];
-const seedAdmin = () => ({ id: 99, name: "Admin", email: "admin@example.com", password: "password123", parish: "ig" });
-
 // Mentees you can search for / befriend
 const menteeDirectory = [
-  { id: 1, name: "Grace Ong", parish: "ig", year: 2 },
-  { id: 2, name: "Marcus Lim", parish: "hs", year: 1 },
-  { id: 3, name: "Rachel Teo", parish: "rc", year: 3 },
+  { id: 1, name: "Grace Ong", parish: "ig", age: "20s", year: 2 },
+  { id: 2, name: "Marcus Lim", parish: "hs", age: "20s", year: 1 },
+  { id: 3, name: "Rachel Teo", parish: "rc", age: "30s", year: 3 },
   { id: 4, name: "Benedict Ho", parish: "ig", year: 1 },
   { id: 5, name: "Clara Ng", parish: "hs", year: 2 },
   { id: 6, name: "Daniel Koh", parish: "gs", year: 1 },
@@ -608,6 +598,24 @@ const mentorDirectory = [
   { id: 13, name: "Mary Chua", parish: "rc", age: "30s", yearsServing: 6, skills: ["Youth", "Classroom management"] },
   { id: 14, name: "Anthony Goh", parish: "gs", age: "50s+", yearsServing: 20, skills: ["Scripture", "Sacrament prep"] },
 ];
+
+// Demo logins: everyone uses the same password; emails are firstname.lastname@example.com.
+// Seeded into localStorage on first load (see auth.js), built from the directories above.
+const DEMO_PASSWORD = "password123";
+const DEMO_LOGIN_IDS = [1, 2, 3, 11, 12, 13]; // directory people who also have a login
+const withDemoLogin = (person) => ({
+  ...person,
+  email: `${person.name.toLowerCase().replace(" ", ".")}@example.com`,
+  password: DEMO_PASSWORD,
+});
+const hasDemoLogin = (person) => DEMO_LOGIN_IDS.includes(person.id);
+
+const seedMentees = () =>
+  [{ id: 0, name: "Joanna Tan", parish: "ig", age: "20s", year: 1 }, ...menteeDirectory.filter(hasDemoLogin)].map(
+    withDemoLogin,
+  );
+const seedMentors = () => mentorDirectory.filter(hasDemoLogin).map(withDemoLogin);
+const seedAdmin = () => withDemoLogin({ id: 99, name: "Admin", parish: "ig" });
 
 const mentorSkills = ["Classroom management", "Sacrament prep", "Scripture", "Youth"];
 
@@ -674,8 +682,7 @@ const encouragementOptions = [
   { emoji: "🙏", label: "praying hands" },
   { emoji: "❤️", label: "a heart" },
   { emoji: "👏", label: "clapping hands" },
-];
-</script>
+];</script>
     <script>
 // state.js — App state (appState) and small helpers: DOM lookup, initials, date and slot helpers.
 
@@ -689,10 +696,9 @@ const CONSENT = {
 const SESSION_SECONDS = 30 * 60;
 
 const appState = {
-  screen: "profile",
-  userId: null,
-  accountType: null,
-  sessionUser: null,
+  screen: "login",
+  accountType: null, // "mentee" | "mentor" | "admin" once logged in
+  sessionUser: null, // the logged-in user (from AUTH)
 
   // Friends
   friends: new Set([1, 2, 3, 4]), // ids of accepted mentee friends
@@ -777,24 +783,17 @@ const timeSlots = ["7:00 PM", "7:30 PM", "8:00 PM", "8:30 PM"];
 // Placeholder rule for demo purposes: a slot is "booked" when the three numbers sum to a multiple of 5
 const isSlotBooked = (mentorId, dayIndex, timeIndex) => (mentorId + dayIndex + timeIndex) % 5 === 0;
 
-// Current user, read from the cached session so it stays consistent
-const getCurrentUser = () => {
-  if (!appState.sessionUser) return null;
-  const user = appState.sessionUser;
-  return {
-    id: user.id,
-    name: user.name,
-    parish: user.parish,
-    age: user.age,
-    year: user.year, // mentees: formation year
-    yearsServing: user.yearsServing, // mentors: years as a catechist
-  };
-};
+// The logged-in user. Every screen except login/register needs one, so screens can rely on it.
+const getCurrentUser = () => appState.sessionUser;
+
+// Other mentees in the directory: the logged-in user never appears as their own friend or suggestion
+const getOtherMentees = () => menteeDirectory.filter((mentee) => mentee.id !== getCurrentUser()?.id);
+const getFriends = () => getOtherMentees().filter((mentee) => appState.friends.has(mentee.id));
 
 // Mentees the user could befriend, filtered by the home-screen controls (own parish first)
 const getSuggestedFriends = () => {
-  const user = getCurrentUser() || fallbackUser;
-  return menteeDirectory
+  const user = getCurrentUser();
+  return getOtherMentees()
     .filter(
       (mentee) =>
         !appState.friends.has(mentee.id) &&
@@ -808,8 +807,8 @@ const getSuggestedFriends = () => {
 
 // Fellowship groups worth starting, worked out from who is in the user's friend network
 const getFellowshipRecommendations = () => {
-  const user = getCurrentUser() || fallbackUser;
-  const friendList = menteeDirectory.filter((mentee) => appState.friends.has(mentee.id));
+  const user = getCurrentUser();
+  const friendList = getFriends();
 
   const parishGroups = Object.keys(parishNames)
     .map((parish) => ({
@@ -871,9 +870,9 @@ const AUTH = {
     return savedSession ? JSON.parse(savedSession) : null;
   },
 
-  // Set session in localStorage
-  setSession(userId, accountType, user) {
-    const session = { userId, accountType, user };
+  // Save the session for an account in localStorage
+  setSession(account) {
+    const session = { accountType: account.accountType, user: this.toSessionUser(account) };
     localStorage.setItem(this.SESSION_KEY, JSON.stringify(session));
     return session;
   },
@@ -916,7 +915,7 @@ const AUTH = {
     if (!account) return { error: "Email not found" };
     if (account.password !== password) return { error: "Password incorrect" };
 
-    return this.setSession(account.id, account.accountType, this.toSessionUser(account));
+    return this.setSession(account);
   },
 
   // Register a new account
@@ -929,78 +928,50 @@ const AUTH = {
     if (password.length < 6) return { error: "Password must be at least 6 characters" };
     if (!name || !accountType) return { error: "Name and account type required" };
 
-    // Create new account
-    const account = {
-      id: Math.floor(Math.random() * 10000),
+    const account = this.makeAccount(accountType, {
+      id: Date.now(), // unique, and never clashes with the small demo ids
       email: emailLower,
       password,
       name,
-      accountType,
       parish: details.parish || "ig",
       age: details.age || "20s",
-      year: details.year || 1,
-      yearsServing: details.yearsServing || 1,
-      skills: details.skills || [],
-    };
+      year: accountType === "mentee" ? 1 : undefined,
+      yearsServing: accountType === "mentor" ? 1 : undefined,
+    });
 
     accounts[emailLower] = account;
     this.setAccounts(accounts);
 
     // Auto-login
-    return this.setSession(account.id, accountType, this.toSessionUser(account));
+    return this.setSession(account);
+  },
+
+  // Stored account record; `person` comes from the register form or the demo seed data
+  makeAccount(accountType, person) {
+    return {
+      id: person.id,
+      email: person.email.toLowerCase(),
+      password: person.password,
+      name: person.name,
+      accountType,
+      parish: person.parish,
+      age: person.age,
+      year: person.year,
+      yearsServing: person.yearsServing,
+      skills: person.skills || [],
+    };
   },
 
   // Seed demo accounts on first load
   seedDemoAccounts() {
     const accounts = {};
-
-    seedMentees().forEach((mentee) => {
-      const email = mentee.email.toLowerCase();
-      accounts[email] = {
-        id: mentee.id,
-        email,
-        password: mentee.password,
-        name: mentee.name,
-        accountType: "mentee",
-        parish: mentee.parish,
-        age: mentee.age,
-        year: mentee.year,
-        yearsServing: undefined,
-        skills: [],
-      };
-    });
-
-    seedMentors().forEach((mentor) => {
-      const email = mentor.email.toLowerCase();
-      accounts[email] = {
-        id: mentor.id,
-        email,
-        password: mentor.password,
-        name: mentor.name,
-        accountType: "mentor",
-        parish: mentor.parish,
-        age: mentor.age,
-        year: undefined,
-        yearsServing: mentor.yearsServing,
-        skills: mentor.skills,
-      };
-    });
-
-    const admin = seedAdmin();
-    const adminEmail = admin.email.toLowerCase();
-    accounts[adminEmail] = {
-      id: admin.id,
-      email: adminEmail,
-      password: admin.password,
-      name: admin.name,
-      accountType: "admin",
-      parish: admin.parish,
-      age: undefined,
-      year: undefined,
-      yearsServing: undefined,
-      skills: [],
+    const add = (accountType, person) => {
+      const account = this.makeAccount(accountType, person);
+      accounts[account.email] = account;
     };
-
+    seedMentees().forEach((mentee) => add("mentee", mentee));
+    seedMentors().forEach((mentor) => add("mentor", mentor));
+    add("admin", seedAdmin());
     this.setAccounts(accounts);
   },
 };
@@ -1025,7 +996,8 @@ const navIcons = {
 };
 
 // Desktop top bar links (matches the wireframe: Courses/Events | Find a Mentor | Resources)
-const renderTopBar = (accountType, activeScreen) => {
+const renderTopBar = (activeScreen) => {
+  const { accountType } = appState;
   const links = [
     ["mentors", "Find a Mentor"],
     accountType !== "mentor" && ["connect", "Add Friend"],
@@ -1042,13 +1014,14 @@ const renderTopBar = (accountType, activeScreen) => {
     )
     .join("");
 
-  const user = getCurrentUser() || fallbackUser;
+  const user = getCurrentUser();
   return `<header class="top"><button class="logo" data-a="go" data-v="home" aria-label="Catechist Support home" title="Catechist Support">OFC</button><nav aria-label="Main">${linkButtons}</nav><button class="av ${activeScreen === "profile" ? "on" : ""}" data-a="go" data-v="profile" aria-label="Your profile">${getInitials(user.name)}</button></header>`;
 };
 
 // Navigation: top bar on desktop, bottom bar on mobile.
 // hideBottomOnMobile is for screens that have their own fixed bottom bar (e.g. "Book a session").
-const renderNav = (accountType, activeScreen, hideBottomOnMobile = false) => {
+const renderNav = (activeScreen, hideBottomOnMobile = false) => {
+  const { accountType } = appState;
   const bottomActive = { journey: "profile", connect: "friends", find: "friends" }[activeScreen] || activeScreen;
   const navItems = [
     ["home", "Home"],
@@ -1066,7 +1039,7 @@ const renderNav = (accountType, activeScreen, hideBottomOnMobile = false) => {
     )
     .join("");
 
-  return `${renderTopBar(accountType, activeScreen)}<div class="bar side${hideBottomOnMobile ? " x" : ""}" style="padding:0"><div class="nav">${buttons}</div></div>`;
+  return `${renderTopBar(activeScreen)}<div class="bar side${hideBottomOnMobile ? " x" : ""}" style="padding:0"><div class="nav">${buttons}</div></div>`;
 };
 
 // Key used to remember that a course item has been ticked off
@@ -1102,10 +1075,11 @@ const renderReactionButtons = (mentee, options = encouragementOptions) =>
     .join("");
 </script>
     <script>
-// views.js — One render function per screen (profile, journey, find, friends, library, mentors, mprof, book, sent, call, take).
+// views.js — One render function per screen (login, register, logout, home, connect, profile, journey, find, friends,
+// library, mentors, mprof, book, sent, call, take, admin), plus the shared "connect" section used by the Add Friend page.
 // Home screen: the four "connect" boxes (add a friend, encouragement, peer support, fellowship groups)
 const renderConnectSection = (user) => {
-  const friendsList = menteeDirectory.filter((mentee) => appState.friends.has(mentee.id));
+  const friendsList = getFriends();
 
   const renderChips = (options, current, action) =>
     options
@@ -1188,46 +1162,43 @@ ${suggestionRows}<button class="sft full" data-a="go" data-v="find">${hiddenCoun
   return `<div class="home-cols">${addFriendCard}<div class="stack">${encouragementCard}${peerCard}</div><div class="span-all">${fellowshipCard}</div></div>`;
 };
 
+// <option> list for a <select>; options are [value, label] pairs
+const renderOptions = (options, selectedValue) =>
+  options
+    .map(([value, label]) => `<option value="${value}" ${value === selectedValue ? "selected" : ""}>${label}</option>`)
+    .join("");
+
 const screenViews = {
   login() {
     return `<div class="pad" style="padding-top:60px;text-align:center;max-width:560px;margin:0 auto">
 <div style="font-size:44px">✝️</div>
 <h1 style="margin-top:16px">Catechist Support</h1>
 <p class="mut">Mentoring & growth for catechists</p>
-<div class="card" style="text-align:left;margin-top:32px">
+<div class="card form" style="text-align:left;margin-top:32px">
 <h2 style="margin-top:0">Login</h2>
-<input type="email" id="loginEmail" placeholder="Email" aria-label="Email" style="width:100%;margin-bottom:8px;padding:10px;border:1px solid var(--bor);border-radius:8px;font-family:inherit;font-size:16px" value="${appState.loginEmail}">
-<input type="password" id="loginPassword" placeholder="Password" aria-label="Password" style="width:100%;margin-bottom:8px;padding:10px;border:1px solid var(--bor);border-radius:8px;font-family:inherit;font-size:16px" value="${appState.loginPassword}">
+<input type="email" id="loginEmail" placeholder="Email" aria-label="Email" value="${appState.loginEmail}">
+<input type="password" id="loginPassword" placeholder="Password" aria-label="Password" value="${appState.loginPassword}">
 <button class="pri full" data-a="login">Login</button>
 <button class="full" style="margin-top:6px" data-a="go" data-v="register">Create an account</button>
 </div>
-<p class="mut" style="margin-top:16px;font-size:12px">Demo: joanna.tan@example.com / password123</p>
+<p class="mut" style="margin-top:16px;font-size:12px">Demo: joanna.tan@example.com / ${DEMO_PASSWORD}</p>
 </div>`;
   },
 
   register() {
+    const accountTypes = [
+      ["mentee", "Mentee (trainee catechist)"],
+      ["mentor", "Mentor (experienced catechist)"],
+    ];
     return `<div class="pad" style="padding-top:40px;text-align:center;max-width:560px;margin:0 auto">
 <h1>Create Account</h1>
-<div class="card" style="text-align:left">
-<input type="text" id="regName" placeholder="Name" aria-label="Name" style="width:100%;margin-bottom:8px;padding:10px;border:1px solid var(--bor);border-radius:8px;font-family:inherit;font-size:16px" value="${appState.regName}">
-<input type="email" id="regEmail" placeholder="Email" aria-label="Email" style="width:100%;margin-bottom:8px;padding:10px;border:1px solid var(--bor);border-radius:8px;font-family:inherit;font-size:16px" value="${appState.regEmail}">
-<input type="password" id="regPassword" placeholder="Password (min 6 chars)" aria-label="Password" style="width:100%;margin-bottom:8px;padding:10px;border:1px solid var(--bor);border-radius:8px;font-family:inherit;font-size:16px" value="${appState.regPassword}">
-<select id="regAccountType" style="width:100%;margin-bottom:8px;padding:10px;border:1px solid var(--bor);border-radius:8px;font-family:inherit;font-size:16px">
-<option value="mentee" ${appState.regAccountType === "mentee" ? "selected" : ""}>Mentee (trainee catechist)</option>
-<option value="mentor" ${appState.regAccountType === "mentor" ? "selected" : ""}>Mentor (experienced catechist)</option>
-</select>
-<select id="regParish" style="width:100%;margin-bottom:8px;padding:10px;border:1px solid var(--bor);border-radius:8px;font-family:inherit;font-size:16px">
-<option value="ig" ${appState.regParish === "ig" ? "selected" : ""}>St Ignatius</option>
-<option value="hs" ${appState.regParish === "hs" ? "selected" : ""}>Holy Spirit</option>
-<option value="rc" ${appState.regParish === "rc" ? "selected" : ""}>Risen Christ</option>
-<option value="gs" ${appState.regParish === "gs" ? "selected" : ""}>Good Shepherd</option>
-</select>
-<select id="regAge" style="width:100%;margin-bottom:8px;padding:10px;border:1px solid var(--bor);border-radius:8px;font-family:inherit;font-size:16px">
-<option value="20s" ${appState.regAge === "20s" ? "selected" : ""}>20s</option>
-<option value="30s" ${appState.regAge === "30s" ? "selected" : ""}>30s</option>
-<option value="40s" ${appState.regAge === "40s" ? "selected" : ""}>40s</option>
-<option value="50s+" ${appState.regAge === "50s+" ? "selected" : ""}>50s+</option>
-</select>
+<div class="card form" style="text-align:left">
+<input type="text" id="regName" placeholder="Name" aria-label="Name" value="${appState.regName}">
+<input type="email" id="regEmail" placeholder="Email" aria-label="Email" value="${appState.regEmail}">
+<input type="password" id="regPassword" placeholder="Password (min 6 chars)" aria-label="Password" value="${appState.regPassword}">
+<select id="regAccountType" aria-label="Account type">${renderOptions(accountTypes, appState.regAccountType)}</select>
+<select id="regParish" aria-label="Parish">${renderOptions(Object.entries(parishNames), appState.regParish)}</select>
+<select id="regAge" aria-label="Age">${renderOptions(ageRanges.map((age) => [age, age]), appState.regAge)}</select>
 <button class="pri full" data-a="register">Create Account</button>
 <button class="full" style="margin-top:6px" data-a="go" data-v="login">Back to login</button>
 </div>
@@ -1247,9 +1218,9 @@ const screenViews = {
   },
 
   home() {
-    const user = getCurrentUser() || fallbackUser;
+    const user = getCurrentUser();
     const isMentor = appState.accountType === "mentor";
-    const friendsList = menteeDirectory.filter((mentee) => appState.friends.has(mentee.id));
+    const friendsList = getFriends();
 
     // Big hero: Find a mentor / Coach a mentee
     const hero = isMentor
@@ -1306,39 +1277,39 @@ const screenViews = {
     const upcomingBox = `<section class="card"><h3 style="font-size:16px">Upcoming courses / events</h3><div class="mut" style="margin:2px 0 12px">Formation and gatherings near you.</div>${eventRows}<button class="sft full" data-a="go" data-v="journey">View formation courses ›</button></section>`;
 
     return `<div class="pad wide"><section class="hero"><div class="mut" style="color:inherit;opacity:.85">Welcome back, ${user.name.split(" ")[0]}</div><h1>${hero.title}</h1><p>${hero.text}</p>${hero.button}</section>
-<div class="home-trio">${friendsBox}${mentorBox}${upcomingBox}</div></div>${renderNav(appState.accountType || "mentee", "home")}`;
+<div class="home-trio">${friendsBox}${mentorBox}${upcomingBox}</div></div>${renderNav("home")}`;
   },
 
   connect() {
-    const user = getCurrentUser() || fallbackUser;
-    return `${renderHeader("Add a friend", "Connect, encourage and grow together")}<div class="pad" style="margin-top:12px">${renderConnectSection(user)}</div>${renderNav(appState.accountType || "mentee", "connect")}`;
+    const user = getCurrentUser();
+    return `${renderHeader("Add a friend", "Connect, encourage and grow together")}<div class="pad" style="margin-top:12px">${renderConnectSection(user)}</div>${renderNav("connect")}`;
   },
 
   profile() {
-    const user = getCurrentUser() || fallbackUser;
+    const user = getCurrentUser();
     return `<div class="ban"></div><div class="pad" style="margin-top:-44px"><div class="card" style="padding-top:0"><div style="display:flex;justify-content:space-between;align-items:flex-end">${renderAvatar(user.name, "l")}<button class="tag gold" style="border:0;min-height:44px" data-a="go" data-v="journey">Year ${user.year || 1} ›</button></div>
 <h1 style="margin-top:8px">${user.name}</h1><div class="mut" style="margin:2px 0 8px">${parishNames[user.parish]}</div><span class="tag sft" style="background:var(--soft);color:var(--pri)">${appState.accountType === "mentor" ? "Mentor" : "Mentee"}</span><span class="tag">${user.age}</span><span class="tag">Catechist</span>
-<div class="row" style="margin-top:10px"><button class="g" style="border:0;text-align:left;background:none;padding:0" data-a="go" data-v="friends"><span class="b" style="font-size:18px">${appState.friends.size}</span> <span class="mut">friends</span></button><div class="g"><span class="b" style="font-size:18px">${appState.sessionCount}</span> <span class="mut">mentor sessions</span></div></div></div>
+<div class="row" style="margin-top:10px"><button class="g" style="border:0;text-align:left;background:none;padding:0" data-a="go" data-v="friends"><span class="b" style="font-size:18px">${getFriends().length}</span> <span class="mut">friends</span></button><div class="g"><span class="b" style="font-size:18px">${appState.sessionCount}</span> <span class="mut">mentor sessions</span></div></div></div>
 <div class="card row"><div class="av" style="background:var(--gold);color:var(--goldt)">★</div><div><div class="b">1 year of service</div><div class="mut">Thank you for your ministry, ${user.name}.</div></div></div><h2>Grow</h2><div class="grid"><button class="pri" style="padding:16px;text-align:left;border-radius:14px" data-a="go" data-v="connect">Add mentee friends</button><button class="pri" style="padding:16px;text-align:left;border-radius:14px" data-a="go" data-v="mentors">Get in touch with a mentor</button></div>
 <button class="full card" style="margin-top:10px;text-align:left" data-a="go" data-v="library">Library <span class="tag" style="margin-left:6px">Nice-to-have</span></button>
-<button class="full" style="margin:16px 0" data-a="go" data-v="logout">Log out</button></div>${renderNav(appState.accountType || "mentee", "profile")}`;
+<button class="full" style="margin:16px 0" data-a="go" data-v="logout">Log out</button></div>${renderNav("profile")}`;
   },
 
   journey() {
     const year = appState.journeyYear;
     const courses = formationCourses[year];
-    const currentUserYear = getCurrentUser()?.year || fallbackUser.year;
+    const currentUserYear = getCurrentUser().year;
     return `${renderHeader("My formation journey", "Formation courses by the Office for Catechesis")}<div class="pad" style="margin-top:12px"><div class="sw">${[1, 2, 3, 4].map((yearNumber) => `<button class="chip ${yearNumber === year ? "on" : ""}" style="flex:1;margin:0;padding:0" data-a="selectYear" data-v="${yearNumber}">Year ${yearNumber}${yearNumber === 4 ? "+" : ""}</button>`).join("")}</div>
 <div class="card pri" style="background:var(--pri);color:var(--on)"><div class="b" style="color:inherit">${year === currentUserYear ? `You're in Year ${year}` : `Year ${year}`}</div>${countCompletedRequired(year)} of ${countRequiredCourses(year)} required items done</div>
 ${courses.map(([title, requirement, items]) => `<div class="card"><div class="row"><h3 class="g">${title}</h3><span class="tag ${requirement === "Required" ? "gold" : ""}">${requirement}</span></div>${items.map((item) => `<label class="row" style="min-height:44px"><input type="checkbox" data-a="toggleCourseItem" data-v="${makeItemKey(year, item)}" ${appState.completedItems.has(makeItemKey(year, item)) ? "checked" : ""} style="width:20px;height:20px"> ${item}</label>`).join("")}</div>`).join("")}</div>`;
   },
 
   find() {
-    return `${renderHeader("Find mentee friends", "", "connect")}<div class="pad" style="margin-top:12px"><input type="search" id="q" placeholder="Search by name or parish" aria-label="Search by name or parish" value="${appState.searchQuery}"><div id="res"></div></div>${renderNav(appState.accountType || "mentee", "connect")}`;
+    return `${renderHeader("Find mentee friends", "", "connect")}<div class="pad" style="margin-top:12px"><input type="search" id="q" placeholder="Search by name or parish" aria-label="Search by name or parish" value="${appState.searchQuery}"><div id="res"></div></div>${renderNav("connect")}`;
   },
 
   friends() {
-    const friendsList = menteeDirectory.filter((mentee) => appState.friends.has(mentee.id));
+    const friendsList = getFriends();
     const requestsSection = appState.incomingRequests.length
       ? `<h2>Friend requests (${appState.incomingRequests.length})</h2>${appState.incomingRequests
           .map((menteeId) => `<div class="card">${renderFriendRequest(menteeId)}</div>`)
@@ -1354,15 +1325,15 @@ ${courses.map(([title, requirement, items]) => `<div class="card"><div class="ro
 
     return `${renderHeader("Friends", "Send a quick word of encouragement", "home", `<button class="sft" data-a="go" data-v="connect">Add</button>`)}<div class="pad">
 ${requestsSection}
-<h2>My friends (${friendsList.length})</h2>${friendCards}</div>${renderNav(appState.accountType || "mentee", "friends")}`;
+<h2>My friends (${friendsList.length})</h2>${friendCards}</div>${renderNav("friends")}`;
   },
 
   library() {
-    return `${renderHeader("Library", "", "home", '<span class="tag">Nice-to-have</span>')}<div class="pad" style="margin-top:12px"><input type="search" placeholder="Search resources" aria-label="Search resources" style="margin-bottom:10px">${libraryCategories.map((category) => `<button class="full card" style="text-align:left;min-height:0" data-a="toggleLibraryCategory" data-v="${category}"><span class="b">${category}</span>${appState.openLibraryCategory === category ? '<div class="mut" style="margin-top:8px;font-weight:400">[Resources to be added: articles, lesson plans, videos]</div>' : ""}</button>`).join("")}</div>${renderNav(appState.accountType || "mentee", "library")}`;
+    return `${renderHeader("Library", "", "home", '<span class="tag">Nice-to-have</span>')}<div class="pad" style="margin-top:12px"><input type="search" placeholder="Search resources" aria-label="Search resources" style="margin-bottom:10px">${libraryCategories.map((category) => `<button class="full card" style="text-align:left;min-height:0" data-a="toggleLibraryCategory" data-v="${category}"><span class="b">${category}</span>${appState.openLibraryCategory === category ? '<div class="mut" style="margin-top:8px;font-weight:400">[Resources to be added: articles, lesson plans, videos]</div>' : ""}</button>`).join("")}</div>${renderNav("library")}`;
   },
 
   mentors() {
-    const user = getCurrentUser() || fallbackUser;
+    const user = getCurrentUser();
     const isInUserParish = (mentor) => Number(mentor.parish === user.parish);
 
     const matchingMentors = mentorDirectory
@@ -1374,15 +1345,8 @@ ${requestsSection}
       )
       .sort((a, b) => isInUserParish(b) - isInUserParish(a)); // mentors from the user's parish first
 
-    const parishOptions = Object.entries(parishNames)
-      .map(
-        ([code, name]) =>
-          `<option value="${code}" ${appState.parishFilter === code ? "selected" : ""}>${name}</option>`,
-      )
-      .join("");
-    const ageOptions = ageRanges
-      .map((age) => `<option ${appState.ageFilter === age ? "selected" : ""}>${age}</option>`)
-      .join("");
+    const parishOptions = renderOptions([["", "All parishes"], ...Object.entries(parishNames)], appState.parishFilter);
+    const ageOptions = renderOptions([["", "Any age"], ...ageRanges.map((age) => [age, age])], appState.ageFilter);
     const skillChips = ["", ...mentorSkills]
       .map(
         (skill) =>
@@ -1397,9 +1361,9 @@ ${requestsSection}
       )
       .join("");
 
-    return `${renderHeader("Find a mentor")}<div class="pad" style="margin-top:12px"><div class="grid"><select aria-label="Parish" data-a="filterParish"><option value="">All parishes</option>${parishOptions}</select><select aria-label="Age" data-a="filterAge"><option value="">Any age</option>${ageOptions}</select></div>
+    return `${renderHeader("Find a mentor")}<div class="pad" style="margin-top:12px"><div class="grid"><select aria-label="Parish" data-a="filterParish">${parishOptions}</select><select aria-label="Age" data-a="filterAge">${ageOptions}</select></div>
 <div style="margin:10px 0;overflow-x:auto;white-space:nowrap">${skillChips}</div><div class="mut" style="margin-bottom:8px">${matchingMentors.length} mentors match</div>
-<div class="grid g3">${mentorCards}</div></div>${renderNav(appState.accountType || "mentee", "mentors")}`;
+<div class="grid g3">${mentorCards}</div></div>${renderNav("mentors")}`;
   },
 
   mprof() {
@@ -1492,7 +1456,7 @@ ${tabContent}</div></div></div>`;
 };
 </script>
     <script>
-// app.js — Router/renderer renderApp(), live search, toasts and the global click/change handlers (data-a actions).
+// app.js — Router/renderer renderApp(), live search, session/booking helpers, toasts and the global click/change handlers (data-a actions).
 
 // Which nav item to highlight on screens that show the side nav
 const navHighlightByScreen = {
@@ -1518,7 +1482,7 @@ function renderApp() {
   if (navHighlightByScreen[screen]) {
     app.insertAdjacentHTML(
       "beforeend",
-      renderNav(appState.accountType || "mentee", navHighlightByScreen[screen], true),
+      renderNav(navHighlightByScreen[screen], true),
     );
   }
   app.className = querySelector("#app .side") ? "wn" : "";
@@ -1578,7 +1542,7 @@ function renderApp() {
 
 function updateSearchResults() {
   const query = appState.searchQuery.toLowerCase();
-  const results = menteeDirectory.filter(
+  const results = getOtherMentees().filter(
     (mentee) =>
       mentee.name.toLowerCase().includes(query) || parishNames[mentee.parish].toLowerCase().includes(query),
   );
@@ -1594,6 +1558,21 @@ function updateSearchResults() {
         return `<div class="card row">${renderAvatar(mentee.name)}<div class="g"><div class="b">${mentee.name}</div><div class="mut">${parishNames[mentee.parish]} · Year ${mentee.year}</div></div><button class="${buttonClass}" ${isFriend ? "disabled" : ""} data-a="toggleFriendRequest" data-v="${mentee.id}">${buttonLabel}</button></div>`;
       })
       .join("");
+}
+
+// Put a logged-in user (from AUTH.login / register / getSession) into state
+function startSession(session) {
+  appState.accountType = session.accountType;
+  appState.sessionUser = session.user;
+  appState.screen = "home";
+}
+
+// Clear the booking form (used when opening "Book a session" and "Book another session")
+function resetBooking() {
+  appState.selectedDayIndex = null;
+  appState.selectedTime = null;
+  appState.topics = [];
+  appState.bookingNote = "";
 }
 
 function showToast(message) {
@@ -1643,10 +1622,7 @@ document.addEventListener("click", (event) => {
 
   const clickActions = {
     go: () => {
-      if (value === "book") {
-        appState.selectedDayIndex = null;
-        appState.selectedTime = null;
-      }
+      if (value === "book") resetBooking();
       goToScreen(value);
     },
 
@@ -1663,10 +1639,7 @@ document.addEventListener("click", (event) => {
         showToast(result.error);
         return;
       }
-      appState.userId = result.userId;
-      appState.accountType = result.accountType;
-      appState.sessionUser = result.user;
-      appState.screen = "home";
+      startSession(result);
       appState.loginEmail = "";
       appState.loginPassword = "";
       renderApp();
@@ -1684,22 +1657,18 @@ document.addEventListener("click", (event) => {
         showToast(result.error);
         return;
       }
-      appState.userId = result.userId;
-      appState.accountType = result.accountType;
-      appState.sessionUser = result.user;
+      startSession(result);
       appState.regName = "";
       appState.regEmail = "";
       appState.regPassword = "";
       appState.regAccountType = "mentee";
       appState.regParish = "ig";
       appState.regAge = "20s";
-      appState.screen = "home";
       renderApp();
       showToast("Account created!");
     },
     confirmLogout: () => {
       AUTH.logout();
-      appState.userId = null;
       appState.accountType = null;
       appState.sessionUser = null;
       appState.screen = "login";
@@ -1810,6 +1779,7 @@ document.addEventListener("click", (event) => {
       appState.consentLevel = CONSENT.NONE;
       appState.callTab = 0;
       appState.sessionNotes = "";
+      appState.hadTranscript = false;
       goToScreen("call");
     },
     toggleMic: () => {
@@ -1840,10 +1810,7 @@ document.addEventListener("click", (event) => {
       goToScreen("take");
     },
     bookAgain: () => {
-      appState.selectedDayIndex = null;
-      appState.selectedTime = null;
-      appState.topics = [];
-      appState.bookingNote = "";
+      resetBooking();
       goToScreen("book");
     },
   };
@@ -1854,14 +1821,7 @@ document.addEventListener("click", (event) => {
 // Initialize auth on page load
 AUTH.initAuth();
 const savedSession = AUTH.getSession();
-if (savedSession) {
-  appState.userId = savedSession.userId;
-  appState.accountType = savedSession.accountType;
-  appState.sessionUser = savedSession.user;
-  appState.screen = "home";
-} else {
-  appState.screen = "login";
-}
+if (savedSession) startSession(savedSession);
 renderApp();
 </script>
   </body>

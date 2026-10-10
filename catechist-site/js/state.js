@@ -10,10 +10,9 @@ const CONSENT = {
 const SESSION_SECONDS = 30 * 60;
 
 const appState = {
-  screen: "profile",
-  userId: null,
-  accountType: null,
-  sessionUser: null,
+  screen: "login",
+  accountType: null, // "mentee" | "mentor" | "admin" once logged in
+  sessionUser: null, // the logged-in user (from AUTH)
 
   // Friends
   friends: new Set([1, 2, 3, 4]), // ids of accepted mentee friends
@@ -98,24 +97,17 @@ const timeSlots = ["7:00 PM", "7:30 PM", "8:00 PM", "8:30 PM"];
 // Placeholder rule for demo purposes: a slot is "booked" when the three numbers sum to a multiple of 5
 const isSlotBooked = (mentorId, dayIndex, timeIndex) => (mentorId + dayIndex + timeIndex) % 5 === 0;
 
-// Current user, read from the cached session so it stays consistent
-const getCurrentUser = () => {
-  if (!appState.sessionUser) return null;
-  const user = appState.sessionUser;
-  return {
-    id: user.id,
-    name: user.name,
-    parish: user.parish,
-    age: user.age,
-    year: user.year, // mentees: formation year
-    yearsServing: user.yearsServing, // mentors: years as a catechist
-  };
-};
+// The logged-in user. Every screen except login/register needs one, so screens can rely on it.
+const getCurrentUser = () => appState.sessionUser;
+
+// Other mentees in the directory: the logged-in user never appears as their own friend or suggestion
+const getOtherMentees = () => menteeDirectory.filter((mentee) => mentee.id !== getCurrentUser()?.id);
+const getFriends = () => getOtherMentees().filter((mentee) => appState.friends.has(mentee.id));
 
 // Mentees the user could befriend, filtered by the home-screen controls (own parish first)
 const getSuggestedFriends = () => {
-  const user = getCurrentUser() || fallbackUser;
-  return menteeDirectory
+  const user = getCurrentUser();
+  return getOtherMentees()
     .filter(
       (mentee) =>
         !appState.friends.has(mentee.id) &&
@@ -129,8 +121,8 @@ const getSuggestedFriends = () => {
 
 // Fellowship groups worth starting, worked out from who is in the user's friend network
 const getFellowshipRecommendations = () => {
-  const user = getCurrentUser() || fallbackUser;
-  const friendList = menteeDirectory.filter((mentee) => appState.friends.has(mentee.id));
+  const user = getCurrentUser();
+  const friendList = getFriends();
 
   const parishGroups = Object.keys(parishNames)
     .map((parish) => ({

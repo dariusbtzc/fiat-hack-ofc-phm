@@ -17,7 +17,8 @@ const navIcons = {
 };
 
 // Desktop top bar links (matches the wireframe: Courses/Events | Find a Mentor | Resources)
-const renderTopBar = (accountType, activeScreen) => {
+const renderTopBar = (activeScreen) => {
+  const { accountType } = appState;
   const links = [
     ["mentors", "Find a Mentor"],
     accountType !== "mentor" && ["connect", "Add Friend"],
@@ -34,13 +35,14 @@ const renderTopBar = (accountType, activeScreen) => {
     )
     .join("");
 
-  const user = getCurrentUser() || fallbackUser;
+  const user = getCurrentUser();
   return `<header class="top"><button class="logo" data-a="go" data-v="home" aria-label="Catechist Support home" title="Catechist Support">OFC</button><nav aria-label="Main">${linkButtons}</nav><button class="av ${activeScreen === "profile" ? "on" : ""}" data-a="go" data-v="profile" aria-label="Your profile">${getInitials(user.name)}</button></header>`;
 };
 
 // Navigation: top bar on desktop, bottom bar on mobile.
 // hideBottomOnMobile is for screens that have their own fixed bottom bar (e.g. "Book a session").
-const renderNav = (accountType, activeScreen, hideBottomOnMobile = false) => {
+const renderNav = (activeScreen, hideBottomOnMobile = false) => {
+  const { accountType } = appState;
   const bottomActive = { journey: "profile", connect: "friends", find: "friends" }[activeScreen] || activeScreen;
   const navItems = [
     ["home", "Home"],
@@ -58,7 +60,7 @@ const renderNav = (accountType, activeScreen, hideBottomOnMobile = false) => {
     )
     .join("");
 
-  return `${renderTopBar(accountType, activeScreen)}<div class="bar side${hideBottomOnMobile ? " x" : ""}" style="padding:0"><div class="nav">${buttons}</div></div>`;
+  return `${renderTopBar(activeScreen)}<div class="bar side${hideBottomOnMobile ? " x" : ""}" style="padding:0"><div class="nav">${buttons}</div></div>`;
 };
 
 // Key used to remember that a course item has been ticked off

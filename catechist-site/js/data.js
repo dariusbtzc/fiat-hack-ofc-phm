@@ -1,4 +1,4 @@
-// data.js — Demo data: parishes, users, formation courses, topics (from data-model.md). Replaced by API calls in the full build.
+// data.js — Demo data: parishes, directories, demo logins, formation courses, topics (from data-model.md). Replaced by API calls in the full build.
 const parishNames = {
   ig: "St Ignatius",
   hs: "Holy Spirit",
@@ -8,28 +8,11 @@ const parishNames = {
 
 const ageRanges = ["20s", "30s", "40s", "50s+"];
 
-// Fallback user shown when nobody is logged in
-const fallbackUser = { id: 0, name: "Joanna Tan", parish: "ig", age: "20s", year: 1 };
-
-// Demo accounts (seeded into localStorage on first load)
-const seedMentees = () => [
-  { id: 0, name: "Joanna Tan", parish: "ig", age: "20s", year: 1, email: "joanna.tan@example.com", password: "password123" },
-  { id: 1, name: "Grace Ong", parish: "ig", age: "20s", year: 2, email: "grace.ong@example.com", password: "password123" },
-  { id: 2, name: "Marcus Lim", parish: "hs", age: "20s", year: 1, email: "marcus.lim@example.com", password: "password123" },
-  { id: 3, name: "Rachel Teo", parish: "rc", age: "30s", year: 3, email: "rachel.teo@example.com", password: "password123" },
-];
-const seedMentors = () => [
-  { id: 11, name: "Patricia Lee", parish: "ig", age: "50s+", yearsServing: 15, email: "patricia.lee@example.com", password: "password123", skills: ["Classroom management", "Sacrament prep"] },
-  { id: 12, name: "Joseph Tan", parish: "hs", age: "40s", yearsServing: 10, email: "joseph.tan@example.com", password: "password123", skills: ["Scripture", "Youth"] },
-  { id: 13, name: "Mary Chua", parish: "rc", age: "30s", yearsServing: 6, email: "mary.chua@example.com", password: "password123", skills: ["Youth", "Classroom management"] },
-];
-const seedAdmin = () => ({ id: 99, name: "Admin", email: "admin@example.com", password: "password123", parish: "ig" });
-
 // Mentees you can search for / befriend
 const menteeDirectory = [
-  { id: 1, name: "Grace Ong", parish: "ig", year: 2 },
-  { id: 2, name: "Marcus Lim", parish: "hs", year: 1 },
-  { id: 3, name: "Rachel Teo", parish: "rc", year: 3 },
+  { id: 1, name: "Grace Ong", parish: "ig", age: "20s", year: 2 },
+  { id: 2, name: "Marcus Lim", parish: "hs", age: "20s", year: 1 },
+  { id: 3, name: "Rachel Teo", parish: "rc", age: "30s", year: 3 },
   { id: 4, name: "Benedict Ho", parish: "ig", year: 1 },
   { id: 5, name: "Clara Ng", parish: "hs", year: 2 },
   { id: 6, name: "Daniel Koh", parish: "gs", year: 1 },
@@ -45,6 +28,24 @@ const mentorDirectory = [
   { id: 13, name: "Mary Chua", parish: "rc", age: "30s", yearsServing: 6, skills: ["Youth", "Classroom management"] },
   { id: 14, name: "Anthony Goh", parish: "gs", age: "50s+", yearsServing: 20, skills: ["Scripture", "Sacrament prep"] },
 ];
+
+// Demo logins: everyone uses the same password; emails are firstname.lastname@example.com.
+// Seeded into localStorage on first load (see auth.js), built from the directories above.
+const DEMO_PASSWORD = "password123";
+const DEMO_LOGIN_IDS = [1, 2, 3, 11, 12, 13]; // directory people who also have a login
+const withDemoLogin = (person) => ({
+  ...person,
+  email: `${person.name.toLowerCase().replace(" ", ".")}@example.com`,
+  password: DEMO_PASSWORD,
+});
+const hasDemoLogin = (person) => DEMO_LOGIN_IDS.includes(person.id);
+
+const seedMentees = () =>
+  [{ id: 0, name: "Joanna Tan", parish: "ig", age: "20s", year: 1 }, ...menteeDirectory.filter(hasDemoLogin)].map(
+    withDemoLogin,
+  );
+const seedMentors = () => mentorDirectory.filter(hasDemoLogin).map(withDemoLogin);
+const seedAdmin = () => withDemoLogin({ id: 99, name: "Admin", parish: "ig" });
 
 const mentorSkills = ["Classroom management", "Sacrament prep", "Scripture", "Youth"];
 
