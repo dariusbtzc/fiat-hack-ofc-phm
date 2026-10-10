@@ -96,14 +96,7 @@ const libraryCategories = [
   "Difficult situations in class",
 ];
 
-// Home screen: featured forum topic and upcoming courses/events
-const featuredDiscussion = {
-  title: "How do you keep Year 1 classes engaged?",
-  author: "Grace Ong",
-  parish: "ig",
-  replies: 4,
-};
-
+// Home screen: upcoming courses/events
 const upcomingEvents = [
   {
     day: "17",
@@ -111,4 +104,11 @@ const upcomingEvents = [
     title: "Day of Recollection",
     detail: "Cathedral of the Good Shepherd · 9:00 AM",
   },
+];
+
+// Quick words of encouragement friends can send each other
+const encouragementOptions = [
+  { emoji: "🙏", label: "praying hands" },
+  { emoji: "❤️", label: "a heart" },
+  { emoji: "👏", label: "clapping hands" },
 ];

@@ -19,16 +19,18 @@ const navIcons = {
 // Desktop top bar links (matches the wireframe: Courses/Events | Find a Mentor | Resources)
 const renderTopBar = (accountType, activeScreen) => {
   const links = [
-    ["journey", "Courses / Events"],
     ["mentors", "Find a Mentor"],
+    accountType !== "mentor" && ["connect", "Add Friend"],
+    ["journey", "Courses / Events"],
     ["library", "Resources"],
     accountType === "admin" && ["admin", "Coordinator"],
   ].filter(Boolean);
+  const topActive = { friends: "connect", find: "connect" }[activeScreen] || activeScreen;
 
   const linkButtons = links
     .map(
       ([screenName, label]) =>
-        `<button data-a="go" data-v="${screenName}" class="${activeScreen === screenName ? "on" : ""}">${label}</button>`,
+        `<button data-a="go" data-v="${screenName}" class="${topActive === screenName ? "on" : ""}">${label}</button>`,
     )
     .join("");
 
@@ -39,7 +41,7 @@ const renderTopBar = (accountType, activeScreen) => {
 // Navigation: top bar on desktop, bottom bar on mobile.
 // hideBottomOnMobile is for screens that have their own fixed bottom bar (e.g. "Book a session").
 const renderNav = (accountType, activeScreen, hideBottomOnMobile = false) => {
-  const bottomActive = activeScreen === "journey" ? "profile" : activeScreen;
+  const bottomActive = { journey: "profile", connect: "friends", find: "friends" }[activeScreen] || activeScreen;
   const navItems = [
     ["home", "Home"],
     accountType !== "mentor" && ["friends", "Friends"],
@@ -75,3 +77,18 @@ const countCompletedRequired = (year) =>
         total + items.filter((item) => appState.completedItems.has(makeItemKey(year, item))).length,
       0,
     );
+
+// Incoming friend request: who it's from, plus Accept / Decline
+const renderFriendRequest = (menteeId) => {
+  const mentee = getMentee(menteeId);
+  return `<div class="row">${renderAvatar(mentee.name)}<div class="g"><div class="b">${mentee.name}</div><div class="mut">${parishNames[mentee.parish]} · Year ${mentee.year}</div></div></div><div class="grid" style="margin-top:10px"><button class="pri" data-a="acceptFriend" data-v="${mentee.id}">Accept</button><button data-a="declineFriend" data-v="${mentee.id}">Decline</button></div>`;
+};
+
+// Emoji buttons for sending a friend a word of encouragement
+const renderReactionButtons = (mentee, options = encouragementOptions) =>
+  options
+    .map(
+      ({ emoji, label }) =>
+        `<button class="em ${appState.reactions[mentee.id] === emoji ? "on" : ""}" aria-label="Send ${label} to ${mentee.name}" data-a="sendReaction" data-v="${mentee.id}|${emoji}">${emoji}</button>`,
+    )
+    .join("");

@@ -32,7 +32,7 @@
     --gold: #3a2f14;
     --goldt: #f0d79a;
     --tag: #262f44;
-    --on: #0f1421;
+    --on: #0f1420;
   }
 }
 :root[data-theme="dark"] {
@@ -353,6 +353,42 @@ select {
 .home-cols .card {
   margin-bottom: 0;
 }
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.span-all {
+  grid-column: 1 / -1;
+}
+.groups {
+  display: grid;
+  grid-template-columns: 1fr;
+  column-gap: 32px;
+}
+
+/* Home screen: three boxes under the hero (Friends | Mentor | Upcoming) */
+.home-trio {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+}
+.home-trio .card {
+  margin-bottom: 0;
+}
+
+/* Experience-level meter (peer support card) */
+.meter {
+  height: 8px;
+  background: var(--tag);
+  border-radius: 99px;
+  overflow: hidden;
+}
+.meter > div {
+  height: 100%;
+  background: var(--pri);
+  border-radius: 99px;
+}
 
 /* Top bar: hidden on mobile (bottom nav is used instead) */
 .top {
@@ -447,8 +483,20 @@ select {
     margin-right: auto;
     padding: 0 32px;
   }
+  .pad.wide {
+    max-width: 1200px;
+  }
+  .home-trio {
+    grid-auto-flow: column;
+    grid-auto-columns: 1fr;
+    grid-template-columns: none;
+  }
   .home-cols {
     grid-template-columns: 1fr 1fr;
+    align-items: start;
+  }
+  .groups {
+    grid-template-columns: repeat(3, 1fr);
   }
   .hero {
     min-height: 260px;

@@ -12,6 +12,8 @@ const navHighlightByScreen = {
 const formatTimeLeft = (totalSeconds) =>
   `${Math.floor(totalSeconds / 60)}:${String(totalSeconds % 60).padStart(2, "0")} left`;
 
+let lastRenderedScreen = null;
+
 function renderApp() {
   const { screen } = appState;
   const app = querySelector("#app");
@@ -26,7 +28,8 @@ function renderApp() {
     );
   }
   app.className = querySelector("#app .side") ? "wn" : "";
-  scrollTo(0, 0);
+  if (screen !== lastRenderedScreen) scrollTo(0, 0);
+  lastRenderedScreen = screen;
 
   if (screen === "find") {
     const searchInput = querySelector("#q");
@@ -225,7 +228,8 @@ document.addEventListener("click", (event) => {
         appState.sentRequests.add(menteeId);
         showToast("Request sent");
       }
-      updateSearchResults();
+      if (appState.screen === "find") updateSearchResults();
+      else renderApp();
     },
     acceptFriend: () => {
       const menteeId = +value;
@@ -241,6 +245,28 @@ document.addEventListener("click", (event) => {
       const [menteeId, emoji] = value.split("|");
       appState.reactions[menteeId] = emoji;
       showToast("Sent " + emoji);
+      renderApp();
+    },
+
+    setSuggestionScope: () => {
+      appState.suggestionScope = value;
+      renderApp();
+    },
+    setSuggestionYear: () => {
+      appState.suggestionYear = +value;
+      renderApp();
+    },
+    findPeersAtLevel: () => {
+      appState.suggestionScope = "all";
+      appState.suggestionYear = +value;
+      renderApp();
+      querySelector("#suggestions")?.scrollIntoView({ behavior: "smooth", block: "center" });
+    },
+    createFellowshipGroup: () => {
+      const group = getFellowshipRecommendations().find((candidate) => candidate.id === value);
+      if (!group) return;
+      appState.fellowshipGroups.add(group.id);
+      showToast(`${group.name} created — invites sent`);
       renderApp();
     },
 

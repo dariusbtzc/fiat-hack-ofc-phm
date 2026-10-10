@@ -16,10 +16,13 @@ const appState = {
   sessionUser: null,
 
   // Friends
-  friends: new Set([1, 2, 3, 4]), // ids of accepted friends
+  friends: new Set([1, 2, 3, 4]), // ids of accepted mentee friends
   sentRequests: new Set(), // ids we've sent a friend request to
   incomingRequests: [5, 6], // ids who've sent us a friend request
   reactions: {}, // menteeId -> emoji we sent them
+  suggestionScope: "all", // home "Add a friend" filter: "all" | "same" | "other" parish
+  suggestionYear: 0, // home "Add a friend" filter: 0 = any level, 1-4 (4 = 4+)
+  fellowshipGroups: new Set(), // ids of fellowship groups we've created
 
   // Formation journey
   journeyYear: 1, // which year tab is showing
@@ -107,4 +110,65 @@ const getCurrentUser = () => {
     year: user.year, // mentees: formation year
     yearsServing: user.yearsServing, // mentors: years as a catechist
   };
+};
+
+// Mentees the user could befriend, filtered by the home-screen controls (own parish first)
+const getSuggestedFriends = () => {
+  const user = getCurrentUser() || fallbackUser;
+  return menteeDirectory
+    .filter(
+      (mentee) =>
+        !appState.friends.has(mentee.id) &&
+        !appState.incomingRequests.includes(mentee.id) &&
+        (appState.suggestionScope === "all" ||
+          (appState.suggestionScope === "same") === (mentee.parish === user.parish)) &&
+        (!appState.suggestionYear || Math.min(mentee.year, 4) === appState.suggestionYear),
+    )
+    .sort((a, b) => Number(b.parish === user.parish) - Number(a.parish === user.parish));
+};
+
+// Fellowship groups worth starting, worked out from who is in the user's friend network
+const getFellowshipRecommendations = () => {
+  const user = getCurrentUser() || fallbackUser;
+  const friendList = menteeDirectory.filter((mentee) => appState.friends.has(mentee.id));
+
+  const parishGroups = Object.keys(parishNames)
+    .map((parish) => ({
+      id: `parish-${parish}`,
+      name: `${parishNames[parish]} Fellowship`,
+      description: parish === user.parish ? "Friends from your own parish" : "Friends from this parish",
+      members: friendList.filter((mentee) => mentee.parish === parish),
+      isOwnParish: parish === user.parish,
+    }))
+    .filter((group) => group.members.length >= 2);
+
+  const ownParishGroups = parishGroups.filter((group) => group.isOwnParish);
+  const otherParishGroups = parishGroups.filter((group) => !group.isOwnParish);
+
+  const yearGroups = [];
+  if (user.year) {
+    const level = Math.min(user.year, 4);
+    const peers = friendList.filter((mentee) => Math.min(mentee.year, 4) === level);
+    if (peers.length >= 2) {
+      yearGroups.push({
+        id: `year-${level}`,
+        name: `Year ${level}${level === 4 ? "+" : ""} Circle`,
+        description: "Peers at the same stage of formation",
+        members: peers,
+      });
+    }
+  }
+
+  const crossParishGroups = [];
+  const outsideParish = friendList.filter((mentee) => mentee.parish !== user.parish);
+  if (outsideParish.length >= 2) {
+    crossParishGroups.push({
+      id: "cross-parish",
+      name: "Across Parishes",
+      description: "Catechists from different parishes",
+      members: outsideParish,
+    });
+  }
+
+  return [...ownParishGroups, ...yearGroups, ...crossParishGroups, ...otherParishGroups].slice(0, 3);
 };
