@@ -154,4 +154,7 @@ ${S.ct == 1 ? (consentLevel == 0 ? `<p>Transcription is off. A transcript is onl
     return `${hd("Key takeaways", `${mentor[1]} · ${dl(days[S.date])} · 30 min`, "profile")}<div class="pad" style="margin-top:12px"><div class="card"><h3>Your notes</h3><p>${S.notes || '<span class="mut">No notes taken.</span>'}</p></div><div class="card"><h3>Topics covered</h3>${S.topics.map((topic) => `<span class="tag">${topic}</span>`).join("")}</div><div class="card"><h3>Transcript</h3><p class="mut">Only saved when both you and your mentor agreed to transcription during the call.${S.hadTr ? " Placeholder transcript saved. Sensitive topics, if any, are flagged to your coordinator for follow-up." : ""}</p></div>
 <button class="pri full" style="margin-bottom:8px" data-a="again">Book another session</button><button class="full" data-a="go" data-v="profile">Done</button></div>`;
   },
+  admin() {
+    return `${hd("Coordinator Dashboard", "Parish oversight and case management", "profile")}<div class="pad"><div class="card"><h3>Session flagging</h3><p>Monitor flagged sessions and sensitive topics from mentee-mentor interactions.</p></div><div class="card"><h3>Account management</h3><p>Manage mentee and mentor accounts, parish assignments, and training progress.</p></div><div class="card"><h3>Reports</h3><p>View analytics on formation completion, session attendance, and engagement.</p></div><p class="mut" style="text-align:center;margin-top:20px;font-size:12px">This feature is coming soon.</p></div>`;
+  },
 };

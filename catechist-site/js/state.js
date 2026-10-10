@@ -58,16 +58,17 @@ const dl = (d) =>
 const times = ["7:00 PM", "7:30 PM", "8:00 PM", "8:30 PM"];
 const booked = (m, d, t) => (m + d + t) % 5 == 0;
 
-// Helper to get current user from menteesN or mentors based on session
+// Helper to get current user from cached session state
 const getCurrUser = () => {
   if (!S.sessionUser) return null;
-  if (S.accountType === "mentee") {
-    const m = seedMentees().find(u => u.id === S.userId);
-    return m ? { id: m.id, name: m.name, p: m.p, age: m.age, yr: m.yr } : null;
-  } else if (S.accountType === "mentor") {
-    const m = seedMentors().find(u => u.id === S.userId);
-    return m ? { id: m.id, name: m.name, p: m.p, age: m.age, yrs: m.yrs } : null;
-  }
-  return null;
+  // Return cached user data from session to ensure consistency
+  return {
+    id: S.sessionUser.id,
+    name: S.sessionUser.name,
+    p: S.sessionUser.parish,
+    age: S.sessionUser.age,
+    yr: S.sessionUser.yr,
+    yrs: S.sessionUser.yrs,
+  };
 };
 
