@@ -1,4 +1,89 @@
 // views.js — One render function per screen (profile, journey, find, friends, library, mentors, mprof, book, sent, call, take).
+// Home screen: the four "connect" boxes (add a friend, encouragement, peer support, fellowship groups)
+const renderConnectSection = (user) => {
+  const friendsList = menteeDirectory.filter((mentee) => appState.friends.has(mentee.id));
+
+  const renderChips = (options, current, action) =>
+    options
+      .map(
+        ([value, label]) =>
+          `<button class="chip ${current === value ? "on" : ""}" data-a="${action}" data-v="${value}">${label}</button>`,
+      )
+      .join("");
+
+  // 1. Add a friend, in your parish or outside it
+  const scopeOptions = [["all", "All"], ["same", "My parish"], ["other", "Other parishes"]];
+  const levelOptions = [[0, "Any level"], [1, "Year 1"], [2, "Year 2"], [3, "Year 3"], [4, "Year 4+"]];
+  const suggestions = getSuggestedFriends();
+  const shownSuggestions = suggestions.slice(0, 4);
+  const hiddenCount = suggestions.length - shownSuggestions.length;
+
+  const requestsBlock = appState.incomingRequests.length
+    ? `<div class="b" style="margin-bottom:8px">Friend requests (${appState.incomingRequests.length})</div>${appState.incomingRequests
+        .map((menteeId) => `<div style="margin-bottom:14px">${renderFriendRequest(menteeId)}</div>`)
+        .join("")}<div style="border-top:1px solid var(--bd);margin:4px 0 12px"></div>`
+    : "";
+
+  const suggestionRows = shownSuggestions.length
+    ? shownSuggestions
+        .map((mentee) => {
+          const isRequested = appState.sentRequests.has(mentee.id);
+          const isSameParish = mentee.parish === user.parish;
+          return `<div class="row" style="margin-bottom:10px">${renderAvatar(mentee.name)}<div class="g"><div class="b">${mentee.name}</div><div class="mut">${parishNames[mentee.parish]} · Year ${mentee.year}</div>${isSameParish ? '<span class="tag" style="background:var(--soft);color:var(--pri);margin-top:4px">Your parish</span>' : ""}</div><button class="${isRequested ? "sft" : "pri"}" data-a="toggleFriendRequest" data-v="${mentee.id}">${isRequested ? "Requested" : "Add"}</button></div>`;
+        })
+        .join("")
+    : `<p class="mut">No catechists match these filters. Try another parish or level.</p>`;
+
+  const addFriendCard = `<section class="card" id="suggestions"><h3 style="font-size:16px">Add a friend</h3><div class="mut" style="margin:2px 0 12px">Connect with catechists in your parish or beyond.</div>${requestsBlock}
+<div class="mut">Parish</div><div style="overflow-x:auto;white-space:nowrap">${renderChips(scopeOptions, appState.suggestionScope, "setSuggestionScope")}</div>
+<div class="mut">Experience</div><div style="overflow-x:auto;white-space:nowrap;margin-bottom:6px">${renderChips(levelOptions, appState.suggestionYear, "setSuggestionYear")}</div>
+${suggestionRows}<button class="sft full" data-a="go" data-v="find">${hiddenCount > 0 ? `Search all (${hiddenCount} more) ›` : "Search the directory ›"}</button></section>`;
+
+  // 2. Support each other with digital encouragement
+  const encouragementRows = friendsList.length
+    ? friendsList
+        .slice(0, 4)
+        .map((mentee) => {
+          const sentEmoji = appState.reactions[mentee.id];
+          return `<div class="row" style="margin-bottom:10px">${renderAvatar(mentee.name)}<div class="g"><div class="b">${mentee.name}</div><div class="mut">${sentEmoji ? "You sent " + sentEmoji : `${parishNames[mentee.parish]} · Year ${mentee.year}`}</div></div>${renderReactionButtons(mentee)}</div>`;
+        })
+        .join("") + `<button class="sft full" data-a="go" data-v="friends">All friends (${friendsList.length}) ›</button>`
+    : `<p class="mut">Add a friend to start sending encouragement.</p>`;
+
+  const encouragementCard = `<section class="card"><h3 style="font-size:16px">Send encouragement</h3><div class="mut" style="margin:2px 0 12px">Lift each other up with a quick digital word.</div>${encouragementRows}</section>`;
+
+  // 3. Peer support across all experience levels
+  const levels = [1, 2, 3, 4].map((level) => ({
+    level,
+    count: friendsList.filter((mentee) => Math.min(mentee.year, 4) === level).length,
+  }));
+  const levelsCovered = levels.filter(({ count }) => count > 0).length;
+  const levelRows = levels
+    .map(
+      ({ level, count }) =>
+        `<div class="row" style="margin-bottom:10px"><span class="b" style="width:66px;flex:none;white-space:nowrap">${level === 4 ? "Year 4+" : `Year ${level}`}</span><div class="g"><div class="meter"><div style="width:${friendsList.length ? Math.round((count / friendsList.length) * 100) : 0}%"></div></div></div>${count ? `<span class="mut" style="width:70px;flex:none;text-align:right">${count} friend${count > 1 ? "s" : ""}</span>` : `<button class="sft" style="min-height:36px;padding:0 12px;flex:none" data-a="findPeersAtLevel" data-v="${level}">Find</button>`}</div>`,
+    )
+    .join("");
+
+  const peerCard = `<section class="card"><h3 style="font-size:16px">Peer support at every level</h3><div class="mut" style="margin:2px 0 12px">Your friends cover ${levelsCovered} of 4 experience levels. Newer and seasoned catechists learn from each other.</div>${levelRows}</section>`;
+
+  // 4. Fellowship groups recommended from your network
+  const recommendations = getFellowshipRecommendations();
+  const groupRows = recommendations.length
+    ? `<div class="groups">` + recommendations
+        .map((group) => {
+          const isCreated = appState.fellowshipGroups.has(group.id);
+          const memberNames = group.members.map((mentee) => mentee.name.split(" ")[0]).join(", ");
+          return `<div class="row" style="margin-bottom:12px"><div class="g"><div class="b">${group.name}</div><div class="mut">${group.description}</div><div class="mut">${memberNames} + you</div></div><button class="${isCreated ? "sft" : "pri"}" ${isCreated ? "disabled" : ""} data-a="createFellowshipGroup" data-v="${group.id}">${isCreated ? "Created ✓" : "Create"}</button></div>`;
+        })
+        .join("") + `</div>`
+    : `<p class="mut">Add a few more friends and we'll recommend fellowship groups from your network.</p>`;
+
+  const fellowshipCard = `<section class="card"><h3 style="font-size:16px">Fellowship groups</h3><div class="mut" style="margin:2px 0 12px">Recommended from your network. Create one and invite everyone.</div>${groupRows}</section>`;
+
+  return `<div class="home-cols">${addFriendCard}<div class="stack">${encouragementCard}${peerCard}</div><div class="span-all">${fellowshipCard}</div></div>`;
+};
+
 const screenViews = {
   login() {
     return `<div class="pad" style="padding-top:60px;text-align:center;max-width:560px;margin:0 auto">
@@ -60,6 +145,9 @@ const screenViews = {
   home() {
     const user = getCurrentUser() || fallbackUser;
     const isMentor = appState.accountType === "mentor";
+    const friendsList = menteeDirectory.filter((mentee) => appState.friends.has(mentee.id));
+
+    // Big hero: Find a mentor / Coach a mentee
     const hero = isMentor
       ? {
           title: "Coach a mentee",
@@ -72,18 +160,54 @@ const screenViews = {
           button: `<button data-a="go" data-v="mentors">Find a mentor</button>`,
         };
 
+    // Box 1: Friends (summary; the full tools are on the Add Friend page)
+    const requestCount = appState.incomingRequests.length;
+    const requestBanner = requestCount
+      ? `<button class="gold full" style="margin-bottom:12px;text-align:left" data-a="go" data-v="connect">${requestCount} friend request${requestCount > 1 ? "s" : ""} waiting ›</button>`
+      : "";
+    const friendRows = friendsList.length
+      ? friendsList
+          .slice(0, 3)
+          .map((mentee) => {
+            const sentEmoji = appState.reactions[mentee.id];
+            return `<div class="row" style="margin-bottom:10px">${renderAvatar(mentee.name)}<div class="g"><div class="b">${mentee.name}</div><div class="mut">${sentEmoji ? "You sent " + sentEmoji : parishNames[mentee.parish]}</div></div>${renderReactionButtons(mentee, encouragementOptions.slice(0, 2))}</div>`;
+          })
+          .join("")
+      : `<p class="mut">No friends yet. Add a catechist to get started.</p>`;
+    const friendsBox = isMentor
+      ? ""
+      : `<section class="card"><div class="row" style="margin-bottom:4px"><h3 class="g" style="font-size:16px">Friends</h3><span class="tag" style="margin:0">${friendsList.length}</span></div><div class="mut" style="margin-bottom:12px">Send a quick word of encouragement.</div>${requestBanner}${friendRows}<div class="grid" style="margin-top:12px"><button class="sft" data-a="go" data-v="friends">All friends</button><button class="pri" data-a="go" data-v="connect">Add friend</button></div></section>`;
+
+    // Box 2: Find a mentor / Coach a mentee
+    const recommendedMentors = [...mentorDirectory]
+      .sort((a, b) => Number(b.parish === user.parish) - Number(a.parish === user.parish))
+      .slice(0, 2);
+    const mentorRows = recommendedMentors
+      .map(
+        (mentor) =>
+          `<div class="row" style="margin-bottom:10px">${renderAvatar(mentor.name)}<div class="g"><div class="b">${mentor.name}</div><div class="mut">${parishNames[mentor.parish]} · ${mentor.skills[0]}</div></div><button class="sft" data-a="viewMentor" data-v="${mentor.id}">View</button></div>`,
+      )
+      .join("");
+    const mentorBox = isMentor
+      ? `<section class="card"><h3 style="font-size:16px">Coach a mentee</h3><div class="mut" style="margin:2px 0 12px">Requests from mentees will appear here.</div><button class="sft full" data-a="comingSoon">Coach a mentee ›</button></section>`
+      : `<section class="card"><h3 style="font-size:16px">Find a mentor</h3><div class="mut" style="margin:2px 0 12px">Mentors from your parish come first.</div>${mentorRows}<button class="sft full" data-a="go" data-v="mentors">Browse all mentors ›</button></section>`;
+
+    // Box 3: Upcoming courses / events
     const eventRows = upcomingEvents
       .map(
         (event) =>
           `<div class="row" style="margin-bottom:12px"><div class="av gold" style="border-radius:10px;font-size:12px;text-align:center">${event.day}<br>${event.month}</div><div><div class="b">${event.title}</div><div class="mut">${event.detail}</div></div></div>`,
       )
       .join("");
+    const upcomingBox = `<section class="card"><h3 style="font-size:16px">Upcoming courses / events</h3><div class="mut" style="margin:2px 0 12px">Formation and gatherings near you.</div>${eventRows}<button class="sft full" data-a="go" data-v="journey">View formation courses ›</button></section>`;
 
-    return `<div class="pad"><section class="hero"><div class="mut" style="color:inherit;opacity:.85">Welcome back, ${user.name.split(" ")[0]}</div><h1>${hero.title}</h1><p>${hero.text}</p>${hero.button}</section>
-<div class="home-cols">
-<section class="card"><h2 style="margin-top:0">Discussions / forums <span class="tag">Nice-to-have</span></h2><span class="tag gold">Featured topic</span><div class="b" style="margin-top:4px">${featuredDiscussion.title}</div><div class="mut">${featuredDiscussion.author} · ${parishNames[featuredDiscussion.parish]} · ${featuredDiscussion.replies} replies</div></section>
-<section class="card"><h2 style="margin-top:0">Upcoming courses / events</h2>${eventRows}<button class="sft full" data-a="go" data-v="journey">View formation courses ›</button></section>
-</div></div>${renderNav(appState.accountType || "mentee", "home")}`;
+    return `<div class="pad wide"><section class="hero"><div class="mut" style="color:inherit;opacity:.85">Welcome back, ${user.name.split(" ")[0]}</div><h1>${hero.title}</h1><p>${hero.text}</p>${hero.button}</section>
+<div class="home-trio">${friendsBox}${mentorBox}${upcomingBox}</div></div>${renderNav(appState.accountType || "mentee", "home")}`;
+  },
+
+  connect() {
+    const user = getCurrentUser() || fallbackUser;
+    return `${renderHeader("Add a friend", "Connect, encourage and grow together")}<div class="pad" style="margin-top:12px">${renderConnectSection(user)}</div>${renderNav(appState.accountType || "mentee", "connect")}`;
   },
 
   profile() {
@@ -91,7 +215,7 @@ const screenViews = {
     return `<div class="ban"></div><div class="pad" style="margin-top:-44px"><div class="card" style="padding-top:0"><div style="display:flex;justify-content:space-between;align-items:flex-end">${renderAvatar(user.name, "l")}<button class="tag gold" style="border:0;min-height:44px" data-a="go" data-v="journey">Year ${user.year || 1} ›</button></div>
 <h1 style="margin-top:8px">${user.name}</h1><div class="mut" style="margin:2px 0 8px">${parishNames[user.parish]}</div><span class="tag sft" style="background:var(--soft);color:var(--pri)">${appState.accountType === "mentor" ? "Mentor" : "Mentee"}</span><span class="tag">${user.age}</span><span class="tag">Catechist</span>
 <div class="row" style="margin-top:10px"><button class="g" style="border:0;text-align:left;background:none;padding:0" data-a="go" data-v="friends"><span class="b" style="font-size:18px">${appState.friends.size}</span> <span class="mut">friends</span></button><div class="g"><span class="b" style="font-size:18px">${appState.sessionCount}</span> <span class="mut">mentor sessions</span></div></div></div>
-<div class="card row"><div class="av" style="background:var(--gold);color:var(--goldt)">★</div><div><div class="b">1 year of service</div><div class="mut">Thank you for your ministry, ${user.name}.</div></div></div><h2>Grow</h2><div class="grid"><button class="pri" style="padding:16px;text-align:left;border-radius:14px" data-a="go" data-v="find">Add friends</button><button class="pri" style="padding:16px;text-align:left;border-radius:14px" data-a="go" data-v="mentors">Get in touch with a mentor</button></div>
+<div class="card row"><div class="av" style="background:var(--gold);color:var(--goldt)">★</div><div><div class="b">1 year of service</div><div class="mut">Thank you for your ministry, ${user.name}.</div></div></div><h2>Grow</h2><div class="grid"><button class="pri" style="padding:16px;text-align:left;border-radius:14px" data-a="go" data-v="connect">Add mentee friends</button><button class="pri" style="padding:16px;text-align:left;border-radius:14px" data-a="go" data-v="mentors">Get in touch with a mentor</button></div>
 <button class="full card" style="margin-top:10px;text-align:left" data-a="go" data-v="library">Library <span class="tag" style="margin-left:6px">Nice-to-have</span></button>
 <button class="full" style="margin:16px 0" data-a="go" data-v="logout">Log out</button></div>${renderNav(appState.accountType || "mentee", "profile")}`;
   },
@@ -106,34 +230,25 @@ ${courses.map(([title, requirement, items]) => `<div class="card"><div class="ro
   },
 
   find() {
-    return `${renderHeader("Find friends")}<div class="pad" style="margin-top:12px"><input type="search" id="q" placeholder="Search by name or parish" aria-label="Search by name or parish" value="${appState.searchQuery}"><div id="res"></div></div>${renderNav(appState.accountType || "mentee", "friends")}`;
+    return `${renderHeader("Find mentee friends", "", "connect")}<div class="pad" style="margin-top:12px"><input type="search" id="q" placeholder="Search by name or parish" aria-label="Search by name or parish" value="${appState.searchQuery}"><div id="res"></div></div>${renderNav(appState.accountType || "mentee", "connect")}`;
   },
 
   friends() {
     const friendsList = menteeDirectory.filter((mentee) => appState.friends.has(mentee.id));
     const requestsSection = appState.incomingRequests.length
       ? `<h2>Friend requests (${appState.incomingRequests.length})</h2>${appState.incomingRequests
-          .map((menteeId) => {
-            const mentee = getMentee(menteeId);
-            return `<div class="card"><div class="row">${renderAvatar(mentee.name)}<div class="g"><div class="b">${mentee.name}</div><div class="mut">${parishNames[mentee.parish]} · Year ${mentee.year}</div></div></div><div class="grid" style="margin-top:10px"><button class="pri" data-a="acceptFriend" data-v="${menteeId}">Accept</button><button data-a="declineFriend" data-v="${menteeId}">Decline</button></div></div>`;
-          })
+          .map((menteeId) => `<div class="card">${renderFriendRequest(menteeId)}</div>`)
           .join("")}`
       : "";
 
     const friendCards = friendsList
       .map((mentee) => {
         const sentEmoji = appState.reactions[mentee.id];
-        const reactionButtons = ["🙏", "❤️"]
-          .map(
-            (emoji) =>
-              `<button class="em ${sentEmoji === emoji ? "on" : ""}" aria-label="Send ${emoji === "🙏" ? "praying hands" : "a heart"} to ${mentee.name}" data-a="sendReaction" data-v="${mentee.id}|${emoji}">${emoji}</button>`,
-          )
-          .join("");
-        return `<div class="card row">${renderAvatar(mentee.name)}<div class="g"><div class="b">${mentee.name}</div><div class="mut">${sentEmoji ? "You sent " + sentEmoji : parishNames[mentee.parish]}</div></div>${reactionButtons}</div>`;
+        return `<div class="card row">${renderAvatar(mentee.name)}<div class="g"><div class="b">${mentee.name}</div><div class="mut">${sentEmoji ? "You sent " + sentEmoji : parishNames[mentee.parish]}</div></div>${renderReactionButtons(mentee)}</div>`;
       })
       .join("");
 
-    return `${renderHeader("Friends", "Send a quick word of encouragement", "home", `<button class="sft" data-a="go" data-v="find">Add</button>`)}<div class="pad">
+    return `${renderHeader("Friends", "Send a quick word of encouragement", "home", `<button class="sft" data-a="go" data-v="connect">Add</button>`)}<div class="pad">
 ${requestsSection}
 <h2>My friends (${friendsList.length})</h2>${friendCards}</div>${renderNav(appState.accountType || "mentee", "friends")}`;
   },
