@@ -1,0 +1,880 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+    <title>Catechist Support</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="css/styles.css" />
+  </head>
+  <body>
+    <div id="app"></div>
+    <script>
+// data.js — Demo data: parishes, users, formation courses, topics (from data-model.md). Replaced by API calls in the full build.
+const ParishName = {
+  ig: "St Ignatius",
+  hs: "Holy Spirit",
+  rc: "Risen Christ",
+  gs: "Good Shepherd",
+};
+const mentees = { id: 0, name: "Joanna Tan", p: "ig", age: "20s", yr: 1 };
+const seedMentees = () => [
+  { id: 0, name: "Joanna Tan", p: "ig", age: "20s", yr: 1, email: "joanna.tan@example.com", password: "password123" },
+  { id: 1, name: "Grace Ong", p: "ig", age: "20s", yr: 2, email: "grace.ong@example.com", password: "password123" },
+  { id: 2, name: "Marcus Lim", p: "hs", age: "20s", yr: 1, email: "marcus.lim@example.com", password: "password123" },
+  { id: 3, name: "Rachel Teo", p: "rc", age: "30s", yr: 3, email: "rachel.teo@example.com", password: "password123" },
+];
+const seedMentors = () => [
+  { id: 11, name: "Patricia Lee", p: "ig", age: "50s+", yrs: 15, email: "patricia.lee@example.com", password: "password123", skills: ["Classroom management", "Sacrament prep"] },
+  { id: 12, name: "Joseph Tan", p: "hs", age: "40s", yrs: 10, email: "joseph.tan@example.com", password: "password123", skills: ["Scripture", "Youth"] },
+  { id: 13, name: "Mary Chua", p: "rc", age: "30s", yrs: 6, email: "mary.chua@example.com", password: "password123", skills: ["Youth", "Classroom management"] },
+];
+const seedAdmin = () => ({ id: 99, name: "Admin", email: "admin@example.com", password: "password123", p: "ig" });
+const menteesN = [
+  [1, "Grace Ong", "ig", 2],
+  [2, "Marcus Lim", "hs", 1],
+  [3, "Rachel Teo", "rc", 3],
+  [4, "Benedict Ho", "ig", 1],
+  [5, "Clara Ng", "hs", 2],
+  [6, "Daniel Koh", "gs", 1],
+  [7, "Samuel Yeo", "ig", 1],
+  [8, "Teresa Lau", "rc", 3],
+  [9, "Paul Sim", "ig", 4],
+];
+const mentors = [
+  [
+    11,
+    "Patricia Lee",
+    "ig",
+    "50s+",
+    15,
+    ["Classroom management", "Sacrament prep"],
+  ],
+  [12, "Joseph Tan", "hs", "40s", 10, ["Scripture", "Youth"]],
+  [13, "Mary Chua", "rc", "30s", 6, ["Youth", "Classroom management"]],
+  [14, "Anthony Goh", "gs", "50s+", 20, ["Scripture", "Sacrament prep"]],
+];
+const SK = ["Classroom management", "Sacrament prep", "Scripture", "Youth"];
+const TOP = [
+  "Knowledge sharing",
+  "Classroom management",
+  "Burnout management",
+  "Safe space",
+  "Fellowship",
+];
+const FORM = {
+  1: [
+    ["Retreat & orientation", "Required", ["Orientation for New Catechists"]],
+    [
+      "Foundational Course (FCC)",
+      "Required",
+      [
+        "Intro to Catechetical Pedagogy & Methods",
+        "Learning to Listen & Facilitate",
+      ],
+    ],
+    ["Basic Course (BCC)", "Choose 1", ["Scripture", "Liturgy"]],
+    ["Additional", "Optional", ["1 more BCC course"]],
+  ],
+  2: [
+    [
+      "Retreat & recollection",
+      "Required",
+      ["Catechists' Retreat and/or Day of Recollection"],
+    ],
+    [
+      "Foundational Course (FCC)",
+      "Required",
+      ["Five Strategies for Living out the Virtues"],
+    ],
+    [
+      "Basic Course (BCC)",
+      "Choose 2",
+      ["Scripture", "Liturgy", "Prayer", "Sacraments", "EV & M"],
+    ],
+    [
+      "Additional",
+      "Optional",
+      ["1 Elective Course (ECC)", "1 Craft of Catechesis Workshop"],
+    ],
+  ],
+  3: [
+    [
+      "Retreat & recollection",
+      "Required",
+      ["Catechists' Retreat and/or Day of Recollection"],
+    ],
+    [
+      "Basic Course (BCC)",
+      "Choose 3",
+      [
+        "Liturgy",
+        "Prayer",
+        "Sacraments",
+        "EV & M",
+        "Christian Anthropology",
+        "Intro to Morality",
+      ],
+    ],
+    [
+      "Additional",
+      "Optional",
+      ["1 Elective Course (ECC)", "1 Craft of Catechesis Workshop"],
+    ],
+  ],
+  4: [
+    [
+      "Retreat & recollection",
+      "Required",
+      ["Catechists' Retreat and/or Day of Recollection"],
+    ],
+    [
+      "Refreshers",
+      "Refresher",
+      ["Catechetical Pedagogy (Refresher)", "BCC Refresher"],
+    ],
+  ],
+};
+const LIB = [
+  "Classroom management",
+  "Knowledge",
+  "Fellowship",
+  "Difficult situations in class",
+];
+</script>
+    <script>
+// state.js — App state (S) and small helpers: DOM lookup, initials, date and slot helpers.
+const S = {
+  scr: "profile",
+  userId: null,
+  accountType: null,
+  sessionUser: null,
+  fr: new Set([1, 2, 3, 4]),
+  req: new Set(),
+  inc: [5, 6],
+  rx: {},
+  tab: 1,
+  done: new Set(),
+  mid: null,
+  date: null,
+  time: null,
+  topics: [],
+  note: "",
+  notes: "",
+  cons: 0,
+  pf: "",
+  af: "",
+  sf: "",
+  q: "",
+  lib: null,
+  tr: 0,
+  t: 1800,
+  loginEmail: "",
+  loginPassword: "",
+  regEmail: "",
+  regPassword: "",
+  regName: "",
+  regAccountType: "mentee",
+  regParish: "ig",
+  regAge: "20s",
+};
+const $ = (s) => document.querySelector(s),
+  ini = (n) =>
+    n
+      .split(" ")
+      .map((w) => w[0])
+      .join("");
+const mn = (id) => menteesN.find((m) => m[0] == id),
+  mt = (id) => mentors.find((m) => m[0] == id);
+const days = [];
+{
+  let d = new Date();
+  while (days.length < 5) {
+    d = new Date(d.getTime() + 864e5);
+    if (d.getDay() % 6) days.push(new Date(d));
+  }
+}
+const dl = (d) =>
+  d.toLocaleDateString("en-SG", {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+  });
+const times = ["7:00 PM", "7:30 PM", "8:00 PM", "8:30 PM"];
+const booked = (m, d, t) => (m + d + t) % 5 == 0;
+
+// Helper to get current user from menteesN or mentors based on session
+const getCurrUser = () => {
+  if (!S.sessionUser) return null;
+  if (S.accountType === "mentee") {
+    const m = seedMentees().find(u => u.id === S.userId);
+    return m ? { id: m.id, name: m.name, p: m.p, age: m.age, yr: m.yr } : null;
+  } else if (S.accountType === "mentor") {
+    const m = seedMentors().find(u => u.id === S.userId);
+    return m ? { id: m.id, name: m.name, p: m.p, age: m.age, yrs: m.yrs } : null;
+  }
+  return null;
+};
+
+</script>
+    <script>
+// auth.js — Authentication module: login, register, logout, session management.
+const AUTH = {
+  SESSION_KEY: "auth.session",
+  ACCOUNTS_KEY: "auth.accounts",
+
+  // Initialize auth on first load: seed demo accounts if none exist
+  initAuth() {
+    if (!localStorage.getItem(this.ACCOUNTS_KEY)) {
+      this.seedDemoAccounts();
+    }
+  },
+
+  // Get current session from localStorage, or null if no active session
+  getSession() {
+    const sess = localStorage.getItem(this.SESSION_KEY);
+    return sess ? JSON.parse(sess) : null;
+  },
+
+  // Set session in localStorage
+  setSession(userId, accountType, user) {
+    const session = { userId, accountType, user };
+    localStorage.setItem(this.SESSION_KEY, JSON.stringify(session));
+    return session;
+  },
+
+  // Clear session
+  logout() {
+    localStorage.removeItem(this.SESSION_KEY);
+  },
+
+  // Get all stored accounts
+  getAccounts() {
+    const accounts = localStorage.getItem(this.ACCOUNTS_KEY);
+    return accounts ? JSON.parse(accounts) : {};
+  },
+
+  // Store accounts
+  setAccounts(accounts) {
+    localStorage.setItem(this.ACCOUNTS_KEY, JSON.stringify(accounts));
+  },
+
+  // Login with email and password
+  login(email, password) {
+    const accounts = this.getAccounts();
+    const account = accounts[email.toLowerCase()];
+    if (!account) return { error: "Email not found" };
+    if (account.password !== password) return { error: "Password incorrect" };
+    
+    // Return session for the account
+    return this.setSession(account.id, account.accountType, {
+      id: account.id,
+      name: account.name,
+      email: account.email,
+      accountType: account.accountType,
+      parish: account.parish || account.p,
+      age: account.age,
+      yr: account.yr,
+      yrs: account.yrs,
+      skills: account.skills,
+    });
+  },
+
+  // Register a new account
+  register(email, password, name, accountType, details) {
+    const emailLower = email.toLowerCase();
+    const accounts = this.getAccounts();
+    
+    // Validation
+    if (accounts[emailLower]) return { error: "Email already exists" };
+    if (password.length < 6) return { error: "Password must be at least 6 characters" };
+    if (!name || !accountType) return { error: "Name and account type required" };
+    
+    // Create new account
+    const id = Math.floor(Math.random() * 10000);
+    const account = {
+      id,
+      email: emailLower,
+      password,
+      name,
+      accountType,
+      parish: details.parish || "ig",
+      age: details.age || "20s",
+      yr: details.yr || 1,
+      yrs: details.yrs || 1,
+      skills: details.skills || [],
+    };
+    
+    // Store account
+    accounts[emailLower] = account;
+    this.setAccounts(accounts);
+    
+    // Auto-login
+    return this.setSession(id, accountType, {
+      id,
+      name,
+      email,
+      accountType,
+      parish: account.parish,
+      age: account.age,
+      yr: account.yr,
+      yrs: account.yrs,
+      skills: account.skills,
+    });
+  },
+
+  // Seed demo accounts on first load
+  seedDemoAccounts() {
+    const accounts = {};
+    
+    // Add demo mentees
+    const mentees = seedMentees();
+    mentees.forEach(m => {
+      accounts[m.email.toLowerCase()] = {
+        id: m.id,
+        email: m.email.toLowerCase(),
+        password: m.password,
+        name: m.name,
+        accountType: "mentee",
+        parish: m.p,
+        age: m.age,
+        yr: m.yr,
+        yrs: undefined,
+        skills: [],
+      };
+    });
+    
+    // Add demo mentors
+    const mentors = seedMentors();
+    mentors.forEach(m => {
+      accounts[m.email.toLowerCase()] = {
+        id: m.id,
+        email: m.email.toLowerCase(),
+        password: m.password,
+        name: m.name,
+        accountType: "mentor",
+        parish: m.p,
+        age: m.age,
+        yr: undefined,
+        yrs: m.yrs,
+        skills: m.skills,
+      };
+    });
+    
+    // Add admin
+    const admin = seedAdmin();
+    accounts[admin.email.toLowerCase()] = {
+      id: admin.id,
+      email: admin.email.toLowerCase(),
+      password: admin.password,
+      name: admin.name,
+      accountType: "admin",
+      parish: admin.p,
+      age: undefined,
+      yr: undefined,
+      yrs: undefined,
+      skills: [],
+    };
+    
+    this.setAccounts(accounts);
+  },
+};
+</script>
+    <script>
+// components.js — Reusable UI pieces: avatar, header, bottom/side navigation, formation progress.
+const av = (n, c = "") => `<div class="av ${c}">${ini(n)}</div>`;
+const hd = (t, sub, back = "profile", extra = "") =>
+  `<div class="hd"><button class="back" aria-label="Back" data-a="go" data-v="${back}">‹</button><div style="flex:1"><h1>${t}</h1>${sub ? `<small>${sub}</small>` : ""}</div>${extra}</div>`;
+const IC = {
+  profile: '<path d="M3 11l9-8 9 8v10H3z"/>',
+  friends:
+    '<circle cx="9" cy="8" r="3"/><path d="M3 20c0-4 3-6 6-6s6 2 6 6M17 5a3 3 0 010 6M21 20c0-3-1-5-3-6"/>',
+  mentors:
+    '<circle cx="9" cy="8" r="3"/><path d="M3 20c0-4 3-6 6-6s6 2 6 6M16 11l2 2 4-4"/>',
+  library:
+    '<path d="M2 4h7a3 3 0 013 3v14a2 2 0 00-2-2H2zM22 4h-7a3 3 0 00-3 3v14a2 2 0 012-2h8z"/>',
+};
+const nav = (accountType, active) =>
+  `<div class="bar side" style="padding:0"><div class="nav">${[
+    ["profile", "Profile"],
+    accountType !== "mentor" && ["friends", "Friends"],
+    ["mentors", "Mentors"],
+    ["library", "Library"],
+    accountType === "admin" && ["admin", "Coordinator"],
+    ["logout", "Logout"],
+  ]
+    .filter(Boolean)
+    .map(
+      ([k, l]) =>
+        `<button data-a="${k === "logout" ? "go" : "go"}" data-v="${k}" class="${active == k ? "on" : ""}"><svg viewBox="0 0 24 24">${IC[k] || '<path d="M3 11l9-8 9 8v10H3z"/>'}</svg>${l}</button>`,
+    )
+    .join("")}</div><div style="padding:10px;text-align:center;font-size:12px;color:var(--mut)">${S.sessionUser ? `${S.sessionUser.name}` : ""}</div></div>`;
+const req = (y) =>
+  FORM[y]
+    .filter((g) => g[1] == "Required")
+    .reduce((a, g) => a + g[2].length, 0);
+const reqDone = (y) =>
+  FORM[y]
+    .filter((g) => g[1] == "Required")
+    .reduce((a, g) => a + g[2].filter((i) => S.done.has(y + i)).length, 0);
+</script>
+    <script>
+// views.js — One render function per screen (profile, journey, find, friends, library, mentors, mprof, book, sent, call, take).
+const V = {
+  login() {
+    return `<div class="pad" style="padding-top:60px;text-align:center;max-width:560px;margin:0 auto">
+<div style="font-size:44px">✝️</div>
+<h1 style="margin-top:16px">Catechist Support</h1>
+<p class="mut">Mentoring & growth for catechists</p>
+<div class="card" style="text-align:left;margin-top:32px">
+<h2 style="margin-top:0">Login</h2>
+<input type="email" id="loginEmail" placeholder="Email" aria-label="Email" style="width:100%;margin-bottom:8px;padding:10px;border:1px solid var(--bor);border-radius:8px;font-family:inherit;font-size:16px" value="${S.loginEmail}">
+<input type="password" id="loginPassword" placeholder="Password" aria-label="Password" style="width:100%;margin-bottom:8px;padding:10px;border:1px solid var(--bor);border-radius:8px;font-family:inherit;font-size:16px" value="${S.loginPassword}">
+<button class="pri full" data-a="loginBtn">Login</button>
+<button class="full" style="margin-top:6px" data-a="go" data-v="register">Create an account</button>
+</div>
+<p class="mut" style="margin-top:16px;font-size:12px">Demo: joanna.tan@example.com / password123</p>
+</div>`;
+  },
+  register() {
+    return `<div class="pad" style="padding-top:40px;text-align:center;max-width:560px;margin:0 auto">
+<h1>Create Account</h1>
+<div class="card" style="text-align:left">
+<input type="text" id="regName" placeholder="Name" aria-label="Name" style="width:100%;margin-bottom:8px;padding:10px;border:1px solid var(--bor);border-radius:8px;font-family:inherit;font-size:16px" value="${S.regName}">
+<input type="email" id="regEmail" placeholder="Email" aria-label="Email" style="width:100%;margin-bottom:8px;padding:10px;border:1px solid var(--bor);border-radius:8px;font-family:inherit;font-size:16px" value="${S.regEmail}">
+<input type="password" id="regPassword" placeholder="Password (min 6 chars)" aria-label="Password" style="width:100%;margin-bottom:8px;padding:10px;border:1px solid var(--bor);border-radius:8px;font-family:inherit;font-size:16px" value="${S.regPassword}">
+<select id="regAccountType" style="width:100%;margin-bottom:8px;padding:10px;border:1px solid var(--bor);border-radius:8px;font-family:inherit;font-size:16px">
+<option value="mentee" ${S.regAccountType === "mentee" ? "selected" : ""}>Mentee (trainee catechist)</option>
+<option value="mentor" ${S.regAccountType === "mentor" ? "selected" : ""}>Mentor (experienced catechist)</option>
+</select>
+<select id="regParish" style="width:100%;margin-bottom:8px;padding:10px;border:1px solid var(--bor);border-radius:8px;font-family:inherit;font-size:16px">
+<option value="ig" ${S.regParish === "ig" ? "selected" : ""}>St Ignatius</option>
+<option value="hs" ${S.regParish === "hs" ? "selected" : ""}>Holy Spirit</option>
+<option value="rc" ${S.regParish === "rc" ? "selected" : ""}>Risen Christ</option>
+<option value="gs" ${S.regParish === "gs" ? "selected" : ""}>Good Shepherd</option>
+</select>
+<select id="regAge" style="width:100%;margin-bottom:8px;padding:10px;border:1px solid var(--bor);border-radius:8px;font-family:inherit;font-size:16px">
+<option value="20s" ${S.regAge === "20s" ? "selected" : ""}>20s</option>
+<option value="30s" ${S.regAge === "30s" ? "selected" : ""}>30s</option>
+<option value="40s" ${S.regAge === "40s" ? "selected" : ""}>40s</option>
+<option value="50s+" ${S.regAge === "50s+" ? "selected" : ""}>50s+</option>
+</select>
+<button class="pri full" data-a="registerBtn">Create Account</button>
+<button class="full" style="margin-top:6px" data-a="go" data-v="login">Back to login</button>
+</div>
+</div>`;
+  },
+  logout() {
+    return `<div class="pad" style="padding-top:60px;text-align:center;max-width:560px;margin:0 auto">
+<div style="font-size:44px">👋</div>
+<h1 style="margin-top:16px">Logout</h1>
+<p>Are you sure you want to log out?</p>
+<div class="grid" style="margin-top:32px">
+<button class="pri" data-a="confirmLogout">Yes, logout</button>
+<button data-a="go" data-v="profile">Cancel</button>
+</div>
+</div>`;
+  },
+  profile() {
+    const user = getCurrUser() || mentees;
+    return `<div class="ban"></div><div class="pad" style="margin-top:-44px"><div class="card" style="padding-top:0"><div style="display:flex;justify-content:space-between;align-items:flex-end">${av(user.name, "l")}<button class="tag gold" style="border:0;min-height:44px" data-a="go" data-v="journey">Year ${user.yr || 1} ›</button></div>
+<h1 style="margin-top:8px">${user.name}</h1><div class="mut" style="margin:2px 0 8px">${PN[user.p]}</div><span class="tag sft" style="background:var(--soft);color:var(--pri)">${S.accountType === "mentor" ? "Mentor" : "Mentee"}</span><span class="tag">${user.age}</span><span class="tag">Catechist</span>
+<div class="row" style="margin-top:10px"><button class="g" style="border:0;text-align:left;background:none;padding:0" data-a="go" data-v="friends"><span class="b" style="font-size:18px">${S.fr.size}</span> <span class="mut">friends</span></button><div class="g"><span class="b" style="font-size:18px">${S.sessions || 0}</span> <span class="mut">mentor sessions</span></div></div></div>
+<div class="card row"><div class="av" style="background:var(--gold);color:var(--goldt)">★</div><div><div class="b">1 year of service</div><div class="mut">Thank you for your ministry, ${user.name}.</div></div></div><h2>Grow</h2><div class="grid"><button class="pri" style="padding:16px;text-align:left;border-radius:14px" data-a="go" data-v="find">Add mentee friends</button><button class="pri" style="padding:16px;text-align:left;border-radius:14px" data-a="go" data-v="mentors">Get in touch with a mentor</button></div>
+<button class="full card" style="margin-top:10px;text-align:left" data-a="go" data-v="library">Library <span class="tag" style="margin-left:6px">Nice-to-have</span></button>
+<h2>Updates / Forum <span class="tag">Nice-to-have</span></h2><div class="card"><div class="b">How do you keep Year 1 classes engaged?</div><div class="mut">Grace Ong · St Ignatius · 4 replies</div></div>
+<h2>Events</h2><div class="card row"><div class="av gold" style="background:var(--gold);color:var(--goldt);border-radius:10px;font-size:12px;text-align:center">17<br>Oct</div><div><div class="b">Day of Recollection</div><div class="mut">Cathedral of the Good Shepherd · 9:00 AM</div></div></div></div>${nav(S.accountType || "mentee", "profile")}`;
+  },
+  journey() {
+    const y = S.tab,
+      g = FORM[y];
+    return `${hd("My formation journey", "Formation courses by the Office for Catechesis")}<div class="pad" style="margin-top:12px"><div class="sw">${[1, 2, 3, 4].map((i) => `<button class="chip ${i == y ? "on" : ""}" style="flex:1;margin:0;padding:0" data-a="tab" data-v="${i}">Year ${i}${i == 4 ? "+" : ""}</button>`).join("")}</div>
+<div class="card pri" style="background:var(--pri);color:var(--on)"><div class="b" style="color:inherit">${y == (getCurrUser()?.yr || mentees.yr) ? `You're in Year ${y}` : `Year ${y}`}</div>${reqDone(y)} of ${req(y)} required items done</div>
+${g.map(([t, r, it]) => `<div class="card"><div class="row"><h3 class="g">${t}</h3><span class="tag ${r == "Required" ? "gold" : ""}">${r}</span></div>${it.map((i) => `<label class="row" style="min-height:44px"><input type="checkbox" data-a="chk" data-v="${y + i}" ${S.done.has(y + i) ? "checked" : ""} style="width:20px;height:20px"> ${i}</label>`).join("")}</div>`).join("")}</div>`;
+  },
+  find() {
+    return `${hd("Find mentee friends")}<div class="pad" style="margin-top:12px"><input type="search" id="q" placeholder="Search by name or parish" aria-label="Search by name or parish" value="${S.q}"><div id="res"></div></div>${nav(S.accountType || "mentee", "friends")}`;
+  },
+  friends() {
+    const fl = menteesN.filter((m) => S.fr.has(m[0]));
+    return `${hd("Friends", "Send a quick word of encouragement", "profile", `<button class="sft" data-a="go" data-v="find">Add</button>`)}<div class="pad">
+${
+  S.inc.length
+    ? `<h2>Friend requests (${S.inc.length})</h2>${S.inc
+        .map((id) => {
+          const m = mn(id);
+          return `<div class="card"><div class="row">${av(m[1])}<div class="g"><div class="b">${m[1]}</div><div class="mut">${PN[m[2]]} · Year ${m[3]}</div></div></div><div class="grid" style="margin-top:10px"><button class="pri" data-a="acc" data-v="${id}">Accept</button><button data-a="dec" data-v="${id}">Decline</button></div></div>`;
+        })
+        .join("")}`
+    : ""
+}
+<h2>My friends (${fl.length})</h2>${fl
+      .map((m) => {
+        const r = S.rx[m[0]];
+        return `<div class="card row">${av(m[1])}<div class="g"><div class="b">${m[1]}</div><div class="mut">${r ? "You sent " + r : PN[m[2]]}</div></div>${["🙏", "❤️"].map((e) => `<button class="em ${r == e ? "on" : ""}" aria-label="Send ${e == "🙏" ? "praying hands" : "a heart"} to ${m[1]}" data-a="rx" data-v="${m[0]}|${e}">${e}</button>`).join("")}</div>`;
+      })
+      .join("")}</div>${nav(S.accountType || "mentee", "friends")}`;
+  },
+  library() {
+    return `${hd("Library", "", "profile", '<span class="tag">Nice-to-have</span>')}<div class="pad" style="margin-top:12px"><input type="search" placeholder="Search resources" aria-label="Search resources" style="margin-bottom:10px">${LIB.map((t) => `<button class="full card" style="text-align:left;min-height:0" data-a="lib" data-v="${t}"><span class="b">${t}</span>${S.lib == t ? '<div class="mut" style="margin-top:8px;font-weight:400">[Resources to be added: articles, lesson plans, videos]</div>' : ""}</button>`).join("")}</div>${nav(S.accountType || "mentee", "library")}`;
+  },
+  mentors() {
+    const user = getCurrUser() || mentees;
+    const l = MTR.filter(
+      (m) =>
+        (!S.pf || m[2] == S.pf) &&
+        (!S.af || m[3] == S.af) &&
+        (!S.sf || m[5].includes(S.sf)),
+    ).sort((a, b) => (b[2] == user.p) - (a[2] == user.p));
+    return `${hd("Find a mentor")}<div class="pad" style="margin-top:12px"><div class="grid"><select aria-label="Parish" data-a="pf"><option value="">All parishes</option>${Object.entries(
+      PN,
+    )
+      .map(
+        ([k, v]) =>
+          `<option value="${k}" ${S.pf == k ? "selected" : ""}>${v}</option>`,
+      )
+      .join(
+        "",
+      )}</select><select aria-label="Age" data-a="af"><option value="">Any age</option>${["20s", "30s", "40s", "50s+"].map((a) => `<option ${S.af == a ? "selected" : ""}>${a}</option>`).join("")}</select></div>
+<div style="margin:10px 0;overflow-x:auto;white-space:nowrap">${["", ...skills].map((s) => `<button class="chip ${S.sf == s ? "on" : ""}" data-a="sf" data-v="${s}">${s || "All"}</button>`).join("")}</div><div class="mut" style="margin-bottom:8px">${l.length} mentors match</div>
+<div class="grid g3">${l.map((m) => `<div class="card" style="text-align:center">${av(m[1]).replace("av", 'av" style="margin:0 auto 6px;"').replace('"" style', '" style')}<div class="b">${m[1]}</div><div class="mut">${PN[m[2]]}<br>${m[3]} · ${m[4]} yrs serving</div>${m[2] == user.p ? '<span class="tag" style="background:var(--soft);color:var(--pri)">Your parish</span> ' : ""}<span class="tag gold" style="margin-top:6px">${m[5][0]}</span><button class="sft full" style="margin-top:6px" data-a="mp" data-v="${m[0]}">View profile</button></div>`).join("")}</div></div>${nav(S.accountType || "mentee", "mentors")}`;
+  },
+  mprof() {
+    const m = mt(S.mid);
+    return `<div class="ban" style="height:110px"></div><div class="mb" style="position:absolute;top:calc(10px + env(safe-area-inset-top,0px));left:10px"><button class="back" aria-label="Back" data-a="go" data-v="mentors">‹</button></div><div class="pad" style="margin-top:-36px">${av(m[1], "l")}<h1 style="margin-top:8px">${m[1]}</h1><div class="mut">${PN[m[2]]}</div><div style="margin-top:8px"><span class="tag gold">Mentor</span><span class="tag">${m[3]}</span><span class="tag">${m[4]} yrs serving</span></div>
+<h2>About</h2><p>[Mentor bio] ${m[1]} has served as a catechist for ${m[4]} years and enjoys walking with newer catechists.</p><h2>Specialisation</h2>${m[5].map((s) => `<span class="tag gold">${s}</span>`).join("")}
+<div class="card" style="margin-top:14px"><div class="b">30-minute video sessions</div><div class="mut">Usually available weekday evenings</div></div></div><div class="bar"><button class="pri full" data-a="go" data-v="book">Book a session</button></div>`;
+  },
+  book() {
+    const m = mt(S.mid),
+      ok = S.date != null && S.time && S.topics.length;
+    return `${hd("Book a session", `with ${m[1]} · 30 min video call`, "mprof")}<div class="pad"><h2>Choose a date</h2><div style="overflow-x:auto;white-space:nowrap">${days.map((d, i) => `<button class="chip ${S.date === i ? "on" : ""}" data-a="date" data-v="${i}">${dl(d)}</button>`).join("")}</div>
+${S.date != null ? `<h2>Choose a time</h2><div class="grid">${times.map((t, i) => (booked(m[0], S.date, i) ? "" : `<button class="chip ${S.time == t ? "on" : ""}" style="margin:0" data-a="time" data-v="${t}">${t}</button>`)).join("")}</div>` : ""}
+<h2>Topics you'd like to discuss (pick 1–2)</h2>${TOP.map((t) => `<button class="chip ${S.topics.includes(t) ? "on" : ""}" data-a="top" data-v="${t}">${t}</button>`).join("")}
+<h2>Note for your mentor (optional)</h2><textarea rows="3" id="note" aria-label="Note">${S.note}</textarea></div>
+<div class="bar"><div class="mut" style="margin-bottom:6px">${ok ? `${dl(days[S.date])} · ${S.time} · ${S.topics.length} topic${S.topics.length > 1 ? "s" : ""}` : "Pick a date, time and at least one topic"}</div><button class="pri full" ${ok ? "" : 'disabled style="opacity:.5"'} data-a="send">Send invite</button></div>`;
+  },
+  sent() {
+    const m = mt(S.mid);
+    return `<div class="pad" style="padding-top:60px;text-align:center;max-width:560px;margin:0 auto"><div style="font-size:44px">✉️</div><div class="b" style="color:var(--ok);font-size:20px">✓ Invite sent</div><p>${S.acc ? `${m[1]} accepted. You're all set.` : `We'll let you know when ${m[1]} accepts.`}</p>
+<div class="card" style="text-align:left"><div class="b">${dl(days[S.date])} · ${S.time}</div><div class="mut">Video call · 30 min</div><div style="margin-top:6px">${S.topics.map((t) => `<span class="tag">${t}</span>`).join("")}</div></div>
+${S.acc ? "" : `<button class="sft full" style="margin-bottom:8px" data-a="accept">${m[1]} accepts (demo)</button>`}<button class="pri full" style="margin-bottom:8px" data-a="call">Join session (demo)</button><button class="full" data-a="go" data-v="profile">Back to profile</button></div>`;
+  },
+  call() {
+    const m = mt(S.mid),
+      c = S.cons;
+    return `<div class="call"><div class="hd"><div style="flex:1"><h1>Session with ${m[1]}</h1><small>${S.topics.join(", ")}</small></div><span class="pill" id="tm"></span></div>
+${c == 2 ? '<div class="pill" style="margin:10px 16px 0;display:inline-block;color:#ff8a80">● Transcribing · both of you agreed</div>' : ""}
+<div class="vid"><div>[Jitsi (JaaS) video placeholder]<br><small>Add JaaS keys to enable the live call</small></div><div class="me">You</div></div>
+<div class="row" style="justify-content:center;margin-bottom:12px"><button id="mic" data-a="mic" style="background:#2C3850;color:#fff;border:0">Mic on</button><button id="cam" data-a="cam" style="background:#2C3850;color:#fff;border:0">Camera on</button><button data-a="end" style="background:var(--bad);color:#fff;border:0">End session</button></div>
+<div class="pad"><div class="card"><div class="sw"><button class="chip ${S.ct != 1 ? "on" : ""}" style="margin:0" data-a="ct" data-v="0">My notes</button><button class="chip ${S.ct == 1 ? "on" : ""}" style="margin:0" data-a="ct" data-v="1">Transcript</button></div>
+${S.ct == 1 ? (c == 0 ? `<p>Transcription is off. A transcript is only made if both you and ${m[1]} agree. Either of you can stop it at any time. If sensitive topics come up, they're flagged to your parish coordinator for care and PDPA compliance.</p><button class="pri full" data-a="c1">I agree — ask ${m[1]}</button>` : c == 1 ? `<p>Waiting for ${m[1]} to agree…</p><div class="grid"><button class="pri" data-a="c2">${m[1]} agrees (demo)</button><button data-a="c0">Cancel request</button></div>` : `<p class="mut">[Live transcript placeholder for the hackathon]</p><p class="mut">Sensitive topics are flagged to your parish coordinator.</p><button class="full" data-a="c0">Stop transcript</button>`) : `<textarea id="notes" rows="6" aria-label="My notes" placeholder="Private notes, autosaved">${S.notes}</textarea>`}</div></div></div>`;
+  },
+  take() {
+    const m = mt(S.mid);
+    return `${hd("Key takeaways", `${m[1]} · ${dl(days[S.date])} · 30 min`, "profile")}<div class="pad" style="margin-top:12px"><div class="card"><h3>Your notes</h3><p>${S.notes || '<span class="mut">No notes taken.</span>'}</p></div><div class="card"><h3>Topics covered</h3>${S.topics.map((t) => `<span class="tag">${t}</span>`).join("")}</div><div class="card"><h3>Transcript</h3><p class="mut">Only saved when both you and your mentor agreed to transcription during the call.${S.hadTr ? " Placeholder transcript saved. Sensitive topics, if any, are flagged to your coordinator for follow-up." : ""}</p></div>
+<button class="pri full" style="margin-bottom:8px" data-a="again">Book another session</button><button class="full" data-a="go" data-v="profile">Done</button></div>`;
+  },
+};
+</script>
+    <script>
+// app.js — Router/renderer R(), live search, toasts and the global click/change handlers (data-a actions).
+function R() {
+  clearInterval(S.iv);
+  $("#app").innerHTML = V[S.scr]();
+  const NA = {
+    journey: "profile",
+    mprof: "mentors",
+    book: "mentors",
+    sent: "mentors",
+    take: "mentors",
+  };
+  if (NA[S.scr])
+    $("#app").insertAdjacentHTML(
+      "beforeend",
+      nav(S.accountType || "mentee", NA[S.scr]).replace("bar side", "bar side x"),
+    );
+  $("#app").className = $("#app .side") ? "wn" : "";
+  scrollTo(0, 0);
+  if (S.scr == "find") {
+    const q = $("#q");
+    q.oninput = () => {
+      S.q = q.value;
+      res();
+    };
+    res();
+  }
+  if (S.scr == "call") {
+    const t = () => {
+      const e = $("#tm");
+      if (e)
+        e.textContent = `${Math.floor(S.t / 60)}:${String(S.t % 60).padStart(2, "0")} left`;
+    };
+    t();
+    S.iv = setInterval(() => {
+      S.t = Math.max(0, S.t - 1);
+      t();
+    }, 1e3);
+  }
+  if (S.scr == "book") {
+    $("#note").oninput = (e) => (S.note = e.target.value);
+  }
+  if (S.scr == "call" && $("#notes"))
+    $("#notes").oninput = (e) => (S.notes = e.target.value);
+  if (S.scr == "login") {
+    const loginEmail = $("#loginEmail");
+    const loginPassword = $("#loginPassword");
+    if (loginEmail) loginEmail.oninput = (e) => (S.loginEmail = e.target.value);
+    if (loginPassword) loginPassword.oninput = (e) => (S.loginPassword = e.target.value);
+  }
+  if (S.scr == "register") {
+    const regName = $("#regName");
+    const regEmail = $("#regEmail");
+    const regPassword = $("#regPassword");
+    const regAccountType = $("#regAccountType");
+    const regParish = $("#regParish");
+    const regAge = $("#regAge");
+    if (regName) regName.oninput = (e) => (S.regName = e.target.value);
+    if (regEmail) regEmail.oninput = (e) => (S.regEmail = e.target.value);
+    if (regPassword) regPassword.oninput = (e) => (S.regPassword = e.target.value);
+    if (regAccountType) regAccountType.onchange = (e) => (S.regAccountType = e.target.value);
+    if (regParish) regParish.onchange = (e) => (S.regParish = e.target.value);
+    if (regAge) regAge.onchange = (e) => (S.regAge = e.target.value);
+  }
+}
+function res() {
+  const q = S.q.toLowerCase(),
+    l = MEN.filter(
+      (m) =>
+        m[1].toLowerCase().includes(q) || PN[m[2]].toLowerCase().includes(q),
+    );
+  $("#res").innerHTML =
+    `<div class="mut" style="margin:10px 0">${l.length} mentees found · They'll need to accept your request</div>` +
+    l
+      .map((m) => {
+        const f = S.fr.has(m[0]),
+          r = S.req.has(m[0]);
+        return `<div class="card row">${av(m[1])}<div class="g"><div class="b">${m[1]}</div><div class="mut">${PN[m[2]]} · Year ${m[3]}</div></div><button class="${f ? "" : r ? "sft" : "pri"}" ${f ? "disabled" : ""} data-a="add" data-v="${m[0]}">${f ? "Friends" : r ? "Requested" : "Add"}</button></div>`;
+      })
+      .join("");
+}
+function toast(t) {
+  const e = document.createElement("div");
+  e.textContent = t;
+  e.style.cssText =
+    "position:fixed;left:50%;top:calc(16px + env(safe-area-inset-top,0px));transform:translateX(-50%);background:var(--pri);color:var(--on);padding:10px 16px;border-radius:99px;z-index:20;font-weight:600;pointer-events:none";
+  document.body.appendChild(e);
+  setTimeout(() => e.remove(), 1800);
+}
+document.addEventListener("change", (e) => {
+  const t = e.target.closest("[data-a]");
+  if (!t) return;
+  if (t.dataset.a == "pf") {
+    S.pf = t.value;
+    R();
+  }
+  if (t.dataset.a == "af") {
+    S.af = t.value;
+    R();
+  }
+  if (t.dataset.a == "chk") {
+    const k = t.dataset.v;
+    t.checked ? S.done.add(k) : S.done.delete(k);
+    R();
+  }
+});
+document.addEventListener("click", (e) => {
+  const t = e.target.closest("[data-a]");
+  if (!t || t.tagName == "SELECT" || t.type == "checkbox") return;
+  const a = t.dataset.a,
+    v = t.dataset.v;
+  const go = (s) => {
+    S.scr = s;
+    R();
+  };
+  ({
+    go: () => {
+      if (v == "book") {
+        S.date = null;
+        S.time = null;
+      }
+      go(v);
+    },
+    loginBtn: () => {
+      if (!S.loginEmail || !S.loginPassword) {
+        toast("Please enter email and password");
+        return;
+      }
+      const result = AUTH.login(S.loginEmail, S.loginPassword);
+      if (result.error) {
+        toast(result.error);
+      } else {
+        S.userId = result.userId;
+        S.accountType = result.accountType;
+        S.sessionUser = result.user;
+        S.scr = "profile";
+        S.loginEmail = "";
+        S.loginPassword = "";
+        R();
+      }
+    },
+    registerBtn: () => {
+      if (!S.regName || !S.regEmail || !S.regPassword) {
+        toast("Please fill in all fields");
+        return;
+      }
+      const result = AUTH.register(S.regEmail, S.regPassword, S.regName, S.regAccountType, {
+        parish: S.regParish,
+        age: S.regAge,
+      });
+      if (result.error) {
+        toast(result.error);
+      } else {
+        S.userId = result.userId;
+        S.accountType = result.accountType;
+        S.sessionUser = result.user;
+        S.regName = "";
+        S.regEmail = "";
+        S.regPassword = "";
+        S.regAccountType = "mentee";
+        S.regParish = "ig";
+        S.regAge = "20s";
+        S.scr = "profile";
+        R();
+        toast("Account created!");
+      }
+    },
+    confirmLogout: () => {
+      AUTH.logout();
+      S.userId = null;
+      S.accountType = null;
+      S.sessionUser = null;
+      S.scr = "login";
+      R();
+      toast("Logged out");
+    },
+    tab: () => {
+      S.tab = +v;
+      R();
+    },
+    add: () => {
+      const id = +v;
+      S.req.has(id) ? S.req.delete(id) : (S.req.add(id), toast("Request sent"));
+      res();
+    },
+    acc: () => {
+      const id = +v;
+      S.inc = S.inc.filter((x) => x != id);
+      S.fr.add(id);
+      R();
+    },
+    dec: () => {
+      S.inc = S.inc.filter((x) => x != +v);
+      R();
+    },
+    rx: () => {
+      const [i, em] = v.split("|");
+      S.rx[i] = em;
+      toast("Sent " + em);
+      R();
+    },
+    lib: () => {
+      S.lib = S.lib == v ? null : v;
+      R();
+    },
+    sf: () => {
+      S.sf = v;
+      R();
+    },
+    mp: () => {
+      S.mid = +v;
+      go("mprof");
+    },
+    date: () => {
+      S.date = +v;
+      S.time = null;
+      R();
+    },
+    time: () => {
+      S.time = v;
+      R();
+    },
+    top: () => {
+      S.topics = S.topics.includes(v)
+        ? S.topics.filter((x) => x != v)
+        : [...S.topics, v].slice(-2);
+      R();
+    },
+    send: () => {
+      S.acc = false;
+      go("sent");
+    },
+    accept: () => {
+      S.acc = true;
+      R();
+    },
+    call: () => {
+      S.t = 1800;
+      S.cons = 0;
+      S.ct = 0;
+      S.notes = "";
+      go("call");
+    },
+    mic: () => {
+      t.textContent = t.textContent == "Mic on" ? "Mic off" : "Mic on";
+    },
+    cam: () => {
+      t.textContent = t.textContent == "Camera on" ? "Camera off" : "Camera on";
+    },
+    ct: () => {
+      S.ct = +v;
+      R();
+    },
+    c0: () => {
+      S.cons = 0;
+      R();
+    },
+    c1: () => {
+      S.cons = 1;
+      R();
+    },
+    c2: () => {
+      S.cons = 2;
+      S.hadTr = true;
+      R();
+    },
+    end: () => {
+      S.sessions = (S.sessions || 0) + 1;
+      go("take");
+    },
+    again: () => {
+      S.date = null;
+      S.time = null;
+      S.topics = [];
+      S.note = "";
+      go("book");
+    },
+  })[a]?.();
+});
+
+// Initialize auth on page load
+AUTH.initAuth();
+const sess = AUTH.getSession();
+if (sess) {
+  S.userId = sess.userId;
+  S.accountType = sess.accountType;
+  S.sessionUser = sess.user;
+  S.scr = "profile";
+} else {
+  S.scr = "login";
+}
+R();
+</script>
+  </body>
+</html>
