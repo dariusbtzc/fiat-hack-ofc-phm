@@ -1320,7 +1320,7 @@ const screenViews = {
 <h1 style="margin-top:8px">${user.name}</h1><div class="mut" style="margin:2px 0 8px">${parishNames[user.parish]}</div><span class="tag sft" style="background:var(--soft);color:var(--pri)">${appState.accountType === "mentor" ? "Mentor" : "Mentee"}</span><span class="tag">${user.age}</span><span class="tag">Catechist</span>
 <div class="row" style="margin-top:10px"><button class="g" style="border:0;text-align:left;background:none;padding:0" data-a="go" data-v="friends"><span class="b" style="font-size:18px">${appState.friends.size}</span> <span class="mut">friends</span></button><div class="g"><span class="b" style="font-size:18px">${appState.sessionCount}</span> <span class="mut">mentor sessions</span></div></div></div>
 <div class="card row"><div class="av" style="background:var(--gold);color:var(--goldt)">★</div><div><div class="b">1 year of service</div><div class="mut">Thank you for your ministry, ${user.name}.</div></div></div><h2>Grow</h2><div class="grid"><button class="pri" style="padding:16px;text-align:left;border-radius:14px" data-a="go" data-v="connect">Add mentee friends</button><button class="pri" style="padding:16px;text-align:left;border-radius:14px" data-a="go" data-v="mentors">Get in touch with a mentor</button></div>
-<button class="full card" style="margin-top:10px;text-align:left" data-a="go" data-v="library">Library <span class="tag" style="margin-left:6px">Nice-to-have</span></button>
+<button class="full card" style="margin-top:10px;text-align:left" data-a="go" data-v="library">Library 
 <button class="full" style="margin:16px 0" data-a="go" data-v="logout">Log out</button></div>${renderNav(appState.accountType || "mentee", "profile")}`;
   },
 
@@ -1358,7 +1358,7 @@ ${requestsSection}
   },
 
   library() {
-    return `${renderHeader("Library", "", "home", '<span class="tag">Nice-to-have</span>')}<div class="pad" style="margin-top:12px"><input type="search" placeholder="Search resources" aria-label="Search resources" style="margin-bottom:10px">${libraryCategories.map((category) => `<button class="full card" style="text-align:left;min-height:0" data-a="toggleLibraryCategory" data-v="${category}"><span class="b">${category}</span>${appState.openLibraryCategory === category ? '<div class="mut" style="margin-top:8px;font-weight:400">[Resources to be added: articles, lesson plans, videos]</div>' : ""}</button>`).join("")}</div>${renderNav(appState.accountType || "mentee", "library")}`;
+    return `${renderHeader("Library", "", "home")}<div class="pad" style="margin-top:12px"><input type="search" placeholder="Search resources" aria-label="Search resources" style="margin-bottom:10px">${libraryCategories.map((category) => `<button class="full card" style="text-align:left;min-height:0" data-a="toggleLibraryCategory" data-v="${category}"><span class="b">${category}</span>${appState.openLibraryCategory === category ? '<div class="mut" style="margin-top:8px;font-weight:400">[Resources to be added: articles, lesson plans, videos]</div>' : ""}</button>`).join("")}</div>${renderNav(appState.accountType || "mentee", "library")}`;
   },
 
   mentors() {
