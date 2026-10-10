@@ -1,5 +1,5 @@
-// state.js — App state (S) and small helpers: DOM lookup, initials, date and slot helpers.
-const S = {
+// state.js — App state (appState) and small helpers: DOM lookup, initials, date and slot helpers.
+const appState = {
   scr: "profile",
   userId: null,
   accountType: null,
@@ -33,14 +33,14 @@ const S = {
   regParish: "ig",
   regAge: "20s",
 };
-const $ = (s) => document.querySelector(s),
-  ini = (n) =>
+const querySelector = (s) => document.querySelector(s),
+  getInitials = (n) =>
     n
       .split(" ")
       .map((w) => w[0])
       .join("");
-const mn = (id) => menteesN.find((m) => m[0] == id),
-  mt = (id) => mentors.find((m) => m[0] == id);
+const getMentee = (id) => menteesN.find((m) => m[0] == id),
+  getMentor = (id) => mentors.find((m) => m[0] == id);
 const days = [];
 {
   let d = new Date();
@@ -60,15 +60,15 @@ const booked = (m, d, t) => (m + d + t) % 5 == 0;
 
 // Helper to get current user from cached session state
 const getCurrUser = () => {
-  if (!S.sessionUser) return null;
+  if (!appState.sessionUser) return null;
   // Return cached user data from session to ensure consistency
   return {
-    id: S.sessionUser.id,
-    name: S.sessionUser.name,
-    p: S.sessionUser.parish,
-    age: S.sessionUser.age,
-    yr: S.sessionUser.yr,
-    yrs: S.sessionUser.yrs,
+    id: appState.sessionUser.id,
+    name: appState.sessionUser.name,
+    p: appState.sessionUser.parish,
+    age: appState.sessionUser.age,
+    yr: appState.sessionUser.yr,
+    yrs: appState.sessionUser.yrs,
   };
 };
 

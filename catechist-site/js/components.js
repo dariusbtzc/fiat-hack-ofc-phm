@@ -1,8 +1,8 @@
 // components.js — Reusable UI pieces: avatar, header, bottom/side navigation, formation progress.
-const av = (n, c = "") => `<div class="av ${c}">${ini(n)}</div>`;
-const hd = (t, sub, back = "profile", extra = "") =>
+const renderAvatar = (n, c = "") => `<div class="av ${c}">${getInitials(n)}</div>`;
+const renderHeader = (t, sub, back = "profile", extra = "") =>
   `<div class="hd"><button class="back" aria-label="Back" data-a="go" data-v="${back}">‹</button><div style="flex:1"><h1>${t}</h1>${sub ? `<small>${sub}</small>` : ""}</div>${extra}</div>`;
-const IC = {
+const navIcons = {
   profile: '<path d="M3 11l9-8 9 8v10H3z"/>',
   friends:
     '<circle cx="9" cy="8" r="3"/><path d="M3 20c0-4 3-6 6-6s6 2 6 6M17 5a3 3 0 010 6M21 20c0-3-1-5-3-6"/>',
@@ -23,14 +23,14 @@ const nav = (accountType, active) =>
     .filter(Boolean)
     .map(
       ([k, l]) =>
-        `<button data-a="${k === "logout" ? "go" : "go"}" data-v="${k}" class="${active == k ? "on" : ""}"><svg viewBox="0 0 24 24">${IC[k] || '<path d="M3 11l9-8 9 8v10H3z"/>'}</svg>${l}</button>`,
+        `<button data-a="${k === "logout" ? "go" : "go"}" data-v="${k}" class="${active == k ? "on" : ""}"><svg viewBox="0 0 24 24">${navIcons[k] || '<path d="M3 11l9-8 9 8v10H3z"/>'}</svg>${l}</button>`,
     )
-    .join("")}</div><div style="padding:10px;text-align:center;font-size:12px;color:var(--mut)">${S.sessionUser ? `${S.sessionUser.name}` : ""}</div></div>`;
-const req = (year) =>
+    .join("")}</div><div style="padding:10px;text-align:center;font-size:12px;color:var(--mut)">${appState.sessionUser ? `${appState.sessionUser.name}` : ""}</div></div>`;
+const countRequiredCourses = (year) =>
   formationCourses[year]
     .filter((group) => group[1] == "Required")
     .reduce((total, group) => total + group[2].length, 0);
-const reqDone = (year) =>
+const countCompletedRequired = (year) =>
   formationCourses[year]
     .filter((group) => group[1] == "Required")
-    .reduce((total, group) => total + group[2].filter((item) => S.done.has(year + item)).length, 0);
+    .reduce((total, group) => total + group[2].filter((item) => appState.done.has(year + item)).length, 0);
