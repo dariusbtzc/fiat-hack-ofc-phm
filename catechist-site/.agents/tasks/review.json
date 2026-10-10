@@ -1,0 +1,10 @@
+{
+  "verdict": "CHANGES_REQUESTED",
+  "findings": [
+    {
+      "issue": "Undefined variables in views",
+      "description": "Three global variable references (MEN, MTR, PN) are missing definitions. Line 67 in app.js uses MEN.filter(), line 102 in views.js uses MTR.filter(), and multiple views use PN[...] to look up parish names. They should be aliased to menteesN, mentors, and ParishName respectively. Will crash when user clicks 'Add mentee friends' or 'Get in touch with a mentor'."
+    }
+  ],
+  "reviewDoc": "/Users/calistawaluja/Personal-Projects/Fiat-Hackathon-2/fiat-hack-ofc-phm/catechist-site/.agents/tasks/review.md"
+}

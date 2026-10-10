@@ -57,7 +57,7 @@ const V = {
   profile() {
     const user = getCurrUser() || mentees;
     return `<div class="ban"></div><div class="pad" style="margin-top:-44px"><div class="card" style="padding-top:0"><div style="display:flex;justify-content:space-between;align-items:flex-end">${av(user.name, "l")}<button class="tag gold" style="border:0;min-height:44px" data-a="go" data-v="journey">Year ${user.yr || 1} ›</button></div>
-<h1 style="margin-top:8px">${user.name}</h1><div class="mut" style="margin:2px 0 8px">${PN[user.p]}</div><span class="tag sft" style="background:var(--soft);color:var(--pri)">${S.accountType === "mentor" ? "Mentor" : "Mentee"}</span><span class="tag">${user.age}</span><span class="tag">Catechist</span>
+<h1 style="margin-top:8px">${user.name}</h1><div class="mut" style="margin:2px 0 8px">${ParishName[user.p]}</div><span class="tag sft" style="background:var(--soft);color:var(--pri)">${S.accountType === "mentor" ? "Mentor" : "Mentee"}</span><span class="tag">${user.age}</span><span class="tag">Catechist</span>
 <div class="row" style="margin-top:10px"><button class="g" style="border:0;text-align:left;background:none;padding:0" data-a="go" data-v="friends"><span class="b" style="font-size:18px">${S.fr.size}</span> <span class="mut">friends</span></button><div class="g"><span class="b" style="font-size:18px">${S.sessions || 0}</span> <span class="mut">mentor sessions</span></div></div></div>
 <div class="card row"><div class="av" style="background:var(--gold);color:var(--goldt)">★</div><div><div class="b">1 year of service</div><div class="mut">Thank you for your ministry, ${user.name}.</div></div></div><h2>Grow</h2><div class="grid"><button class="pri" style="padding:16px;text-align:left;border-radius:14px" data-a="go" data-v="find">Add mentee friends</button><button class="pri" style="padding:16px;text-align:left;border-radius:14px" data-a="go" data-v="mentors">Get in touch with a mentor</button></div>
 <button class="full card" style="margin-top:10px;text-align:left" data-a="go" data-v="library">Library <span class="tag" style="margin-left:6px">Nice-to-have</span></button>
@@ -82,7 +82,7 @@ ${
     ? `<h2>Friend requests (${S.inc.length})</h2>${S.inc
         .map((id) => {
           const m = mn(id);
-          return `<div class="card"><div class="row">${av(m[1])}<div class="g"><div class="b">${m[1]}</div><div class="mut">${PN[m[2]]} · Year ${m[3]}</div></div></div><div class="grid" style="margin-top:10px"><button class="pri" data-a="acc" data-v="${id}">Accept</button><button data-a="dec" data-v="${id}">Decline</button></div></div>`;
+          return `<div class="card"><div class="row">${av(m[1])}<div class="g"><div class="b">${m[1]}</div><div class="mut">${ParishName[m[2]]} · Year ${m[3]}</div></div></div><div class="grid" style="margin-top:10px"><button class="pri" data-a="acc" data-v="${id}">Accept</button><button data-a="dec" data-v="${id}">Decline</button></div></div>`;
         })
         .join("")}`
     : ""
@@ -90,7 +90,7 @@ ${
 <h2>My friends (${fl.length})</h2>${fl
       .map((m) => {
         const r = S.rx[m[0]];
-        return `<div class="card row">${av(m[1])}<div class="g"><div class="b">${m[1]}</div><div class="mut">${r ? "You sent " + r : PN[m[2]]}</div></div>${["🙏", "❤️"].map((e) => `<button class="em ${r == e ? "on" : ""}" aria-label="Send ${e == "🙏" ? "praying hands" : "a heart"} to ${m[1]}" data-a="rx" data-v="${m[0]}|${e}">${e}</button>`).join("")}</div>`;
+        return `<div class="card row">${av(m[1])}<div class="g"><div class="b">${m[1]}</div><div class="mut">${r ? "You sent " + r : ParishName[m[2]]}</div></div>${["🙏", "❤️"].map((e) => `<button class="em ${r == e ? "on" : ""}" aria-label="Send ${e == "🙏" ? "praying hands" : "a heart"} to ${m[1]}" data-a="rx" data-v="${m[0]}|${e}">${e}</button>`).join("")}</div>`;
       })
       .join("")}</div>${nav(S.accountType || "mentee", "friends")}`;
   },
@@ -99,14 +99,14 @@ ${
   },
   mentors() {
     const user = getCurrUser() || mentees;
-    const l = MTR.filter(
+    const l = mentors.filter(
       (m) =>
         (!S.pf || m[2] == S.pf) &&
         (!S.af || m[3] == S.af) &&
         (!S.sf || m[5].includes(S.sf)),
     ).sort((a, b) => (b[2] == user.p) - (a[2] == user.p));
     return `${hd("Find a mentor")}<div class="pad" style="margin-top:12px"><div class="grid"><select aria-label="Parish" data-a="pf"><option value="">All parishes</option>${Object.entries(
-      PN,
+      ParishName,
     )
       .map(
         ([k, v]) =>
@@ -116,11 +116,11 @@ ${
         "",
       )}</select><select aria-label="Age" data-a="af"><option value="">Any age</option>${["20s", "30s", "40s", "50s+"].map((a) => `<option ${S.af == a ? "selected" : ""}>${a}</option>`).join("")}</select></div>
 <div style="margin:10px 0;overflow-x:auto;white-space:nowrap">${["", ...skills].map((s) => `<button class="chip ${S.sf == s ? "on" : ""}" data-a="sf" data-v="${s}">${s || "All"}</button>`).join("")}</div><div class="mut" style="margin-bottom:8px">${l.length} mentors match</div>
-<div class="grid g3">${l.map((m) => `<div class="card" style="text-align:center">${av(m[1]).replace("av", 'av" style="margin:0 auto 6px;"').replace('"" style', '" style')}<div class="b">${m[1]}</div><div class="mut">${PN[m[2]]}<br>${m[3]} · ${m[4]} yrs serving</div>${m[2] == user.p ? '<span class="tag" style="background:var(--soft);color:var(--pri)">Your parish</span> ' : ""}<span class="tag gold" style="margin-top:6px">${m[5][0]}</span><button class="sft full" style="margin-top:6px" data-a="mp" data-v="${m[0]}">View profile</button></div>`).join("")}</div></div>${nav(S.accountType || "mentee", "mentors")}`;
+<div class="grid g3">${l.map((m) => `<div class="card" style="text-align:center">${av(m[1]).replace("av", 'av" style="margin:0 auto 6px;"').replace('"" style', '" style')}<div class="b">${m[1]}</div><div class="mut">${ParishName[m[2]]}<br>${m[3]} · ${m[4]} yrs serving</div>${m[2] == user.p ? '<span class="tag" style="background:var(--soft);color:var(--pri)">Your parish</span> ' : ""}<span class="tag gold" style="margin-top:6px">${m[5][0]}</span><button class="sft full" style="margin-top:6px" data-a="mp" data-v="${m[0]}">View profile</button></div>`).join("")}</div></div>${nav(S.accountType || "mentee", "mentors")}`;
   },
   mprof() {
     const m = mt(S.mid);
-    return `<div class="ban" style="height:110px"></div><div class="mb" style="position:absolute;top:calc(10px + env(safe-area-inset-top,0px));left:10px"><button class="back" aria-label="Back" data-a="go" data-v="mentors">‹</button></div><div class="pad" style="margin-top:-36px">${av(m[1], "l")}<h1 style="margin-top:8px">${m[1]}</h1><div class="mut">${PN[m[2]]}</div><div style="margin-top:8px"><span class="tag gold">Mentor</span><span class="tag">${m[3]}</span><span class="tag">${m[4]} yrs serving</span></div>
+    return `<div class="ban" style="height:110px"></div><div class="mb" style="position:absolute;top:calc(10px + env(safe-area-inset-top,0px));left:10px"><button class="back" aria-label="Back" data-a="go" data-v="mentors">‹</button></div><div class="pad" style="margin-top:-36px">${av(m[1], "l")}<h1 style="margin-top:8px">${m[1]}</h1><div class="mut">${ParishName[m[2]]}</div><div style="margin-top:8px"><span class="tag gold">Mentor</span><span class="tag">${m[3]}</span><span class="tag">${m[4]} yrs serving</span></div>
 <h2>About</h2><p>[Mentor bio] ${m[1]} has served as a catechist for ${m[4]} years and enjoys walking with newer catechists.</p><h2>Specialisation</h2>${m[5].map((s) => `<span class="tag gold">${s}</span>`).join("")}
 <div class="card" style="margin-top:14px"><div class="b">30-minute video sessions</div><div class="mut">Usually available weekday evenings</div></div></div><div class="bar"><button class="pri full" data-a="go" data-v="book">Book a session</button></div>`;
   },

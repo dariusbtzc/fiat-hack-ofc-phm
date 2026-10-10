@@ -64,9 +64,9 @@ function R() {
 }
 function res() {
   const q = S.q.toLowerCase(),
-    l = MEN.filter(
+    l = menteesN.filter(
       (m) =>
-        m[1].toLowerCase().includes(q) || PN[m[2]].toLowerCase().includes(q),
+        m[1].toLowerCase().includes(q) || ParishName[m[2]].toLowerCase().includes(q),
     );
   $("#res").innerHTML =
     `<div class="mut" style="margin:10px 0">${l.length} mentees found · They'll need to accept your request</div>` +
@@ -74,7 +74,7 @@ function res() {
       .map((m) => {
         const f = S.fr.has(m[0]),
           r = S.req.has(m[0]);
-        return `<div class="card row">${av(m[1])}<div class="g"><div class="b">${m[1]}</div><div class="mut">${PN[m[2]]} · Year ${m[3]}</div></div><button class="${f ? "" : r ? "sft" : "pri"}" ${f ? "disabled" : ""} data-a="add" data-v="${m[0]}">${f ? "Friends" : r ? "Requested" : "Add"}</button></div>`;
+        return `<div class="card row">${av(m[1])}<div class="g"><div class="b">${m[1]}</div><div class="mut">${ParishName[m[2]]} · Year ${m[3]}</div></div><button class="${f ? "" : r ? "sft" : "pri"}" ${f ? "disabled" : ""} data-a="add" data-v="${m[0]}">${f ? "Friends" : r ? "Requested" : "Add"}</button></div>`;
       })
       .join("");
 }
