@@ -1,5 +1,5 @@
 // views.js — One render function per screen (profile, journey, find, friends, library, mentors, mprof, book, sent, call, take).
-const V = {
+const screenViews = {
   login() {
     return `<div class="pad" style="padding-top:60px;text-align:center;max-width:560px;margin:0 auto">
 <div style="font-size:44px">✝️</div>
